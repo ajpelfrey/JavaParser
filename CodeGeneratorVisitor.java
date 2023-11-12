@@ -3,13 +3,16 @@ import edu.ufl.cise.cop4020fa23.ast.*;
 import edu.ufl.cise.cop4020fa23.exceptions.PLCCompilerException;
 import edu.ufl.cise.cop4020fa23.exceptions.TypeCheckException;
 import edu.ufl.cise.cop4020fa23.runtime.ConsoleIO;
-import java.util.List;
-import java.util.Objects;
+
+import java.util.*;
 import java.lang.*;
 
 public class CodeGeneratorVisitor implements ASTVisitor {
 
+    private Map<String, Integer> declaredVariableCounts = new HashMap<>();
 
+    private int counter = 1;
+  //  private int n = counter;
     private SymbolTable symbolTable;
     private String packageName;
     String nameDef = "";
@@ -139,9 +142,28 @@ return null;
             binaryExpr.getRightExpr().visit(this, arg);
             sb.append(")))");
         }
+
         else {
             sb.append("(");
             binaryExpr.getLeftExpr().visit(this,arg);
+          if (binaryExpr.getOp().kind()==Kind.GT) //TODO add all cases
+          {
+              sb.append(">");
+          }
+            if (binaryExpr.getOp().kind()==Kind.LT) //TODO add all cases
+            {
+                sb.append("<");
+            }
+            if (binaryExpr.getOp().kind()==Kind.MINUS) //TODO add all cases
+            {
+                sb.append("-");
+            }
+            if (binaryExpr.getOp().kind()==Kind.ASSIGN) //TODO add all cases
+            {
+                sb.append("=");
+            }
+
+
            if (binaryExpr.getOp().kind()==Kind.PLUS)
            {
                sb.append("+");
@@ -172,7 +194,11 @@ return null;
 
     @Override
     public Object visitBlockStatement(StatementBlock statementBlock, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitBlockStatement");
+
+        statementBlock.getBlock().visit(this,arg);
+        return null;
+
+        //  throw new TypeCheckException("visitBlockStatement");
     }
 
     @Override
@@ -248,7 +274,14 @@ return null;
              return null;
          }
 
-          sb.append(identExpr.getNameDef().getName());
+
+       /* if (declaredVariables.contains(identExpr.getName()+"$1"))
+        {
+            sb.append(identExpr.getNameDef().getName()).append("$").append(identifierCount-1);
+        }*/
+        else
+            sb.append(identExpr.getNameDef().getJavaName());
+        //sb.append(identExpr.getNameDef().getName());
         return null;
     }
 
@@ -262,28 +295,30 @@ return null;
 
         if (lValue.firstToken.kind()==Kind.IDENT)
         {
+          //  int varCount = declaredVariableCounts.getOrDefault(lValue.firstToken.text(), identifierCount);
+
             sb.append(lValue.firstToken.text());
         }
-///        lValue.getNameDef().visit(this,arg);
-      // lValue.visit(this,arg);
-     //   sb.append(lValue.getNameToken().toString());
+
        return null;
         //  throw new T;ypeCheckException("visitLValue");
     }
+    private int identifierCount = 1;
+    List<String> declaredVariables = new ArrayList<>();
 
     @Override
     public Object visitNameDef(NameDef nameDef, Object arg) throws PLCCompilerException {
-        if (nameDef.getType()!=null) {
+
+
+
             sb.append(nameDef.getType().name().toLowerCase());
+            String varName = nameDef.getJavaName();
+
+
             sb.append(" ");
-
-
-        }
-
-        sb.append(nameDef.getName());
-        //nameDef.visit(this,arg);
+            
+        sb.append(varName);
         return null;
-        //        throw new TypeCheckException("visitNameDef");
     }
 
     @Override
@@ -317,7 +352,8 @@ return null;
     @Override
     public Object visitStringLitExpr(StringLitExpr stringLitExpr, Object arg) throws PLCCompilerException {
         sb.append(stringLitExpr.getText());
-        throw new TypeCheckException("visitStringLitExpr");
+        return null;
+        //        throw new TypeCheckException("visitStringLitExpr");
     }
 
     @Override
