@@ -5,9 +5,7 @@ import edu.ufl.cise.cop4020fa23.exceptions.PLCCompilerException;
 import edu.ufl.cise.cop4020fa23.exceptions.SyntaxException;
 import edu.ufl.cise.cop4020fa23.exceptions.TypeCheckException;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 public class TypeCheckVisitor implements ASTVisitor {
 
@@ -45,6 +43,10 @@ public class TypeCheckVisitor implements ASTVisitor {
 //block of guard first blocks initializer isn't being set to its type
         //throw new UnsupportedOperationException("visit visitBlock");
     }
+    private int identifierCount = 1;
+    List<String> declaredVariables = new ArrayList<>();
+    private Map<String, Integer> declaredVariableCounts = new HashMap<>();
+
     @Override
     public Object visitNameDef(NameDef nameDef, Object arg) throws PLCCompilerException {
 
@@ -64,6 +66,26 @@ public class TypeCheckVisitor implements ASTVisitor {
         }
             else throw new TypeCheckException("wrong type of namedef");
 //////
+        String varName = nameDef.getName();
+
+            if (declaredVariables.contains(nameDef.getName())) {
+                int varCount = declaredVariableCounts.getOrDefault(varName, 0);
+                declaredVariableCounts.put(varName, varCount + 1);
+                String uniqueVarName = varName + "$" + varCount;
+
+                // Add the unique variable name to declared variables
+                declaredVariables.add(uniqueVarName);
+                nameDef.setJavaName(uniqueVarName);
+
+                // Variable name already exists, append unique identifier
+                varName += "$" + (identifierCount++);
+            } else {
+                //varName+="$1";
+                // New variable name, add to declared variables
+                declaredVariables.add(varName);
+                nameDef.setJavaName(varName);
+            }
+
         st.insert(nameDef);
         return type;
     }
