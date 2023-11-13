@@ -424,6 +424,60 @@ return null;
     public Object visitUnaryExpr(UnaryExpr unaryExpr, Object arg) throws PLCCompilerException {
         sb.append("(");
         Kind opKind = unaryExpr.getOp();
+
+
+
+
+        if (Objects.equals(opKind.toString(), "SEMI"))
+            sb.append(";");
+        if (Objects.equals(opKind.toString(), "COMMA"))
+            sb.append(",");
+        if (Objects.equals(opKind.toString(), "QUESTION"))
+            sb.append("?");
+        if (Objects.equals(opKind.toString(), "RPAREN"))
+            sb.append(")");
+        if (Objects.equals(opKind.toString(), "LPAREN"))
+            sb.append("(");
+        if (Objects.equals(opKind.toString(), "LT"))
+            sb.append("<");
+        if (Objects.equals(opKind.toString(), "GT"))
+            sb.append(">");
+        if (Objects.equals(opKind.toString(), "LSQUARE"))
+            sb.append("[");
+        if (Objects.equals(opKind.toString(), "RSQUARE"))
+            sb.append("]");
+        if (Objects.equals(opKind.toString(), "ASSIGN"))
+            sb.append("=");
+        if (Objects.equals(opKind.toString(), "EQ"))
+            sb.append("==");
+        if (Objects.equals(opKind.toString(), "LE"))
+            sb.append("<=");
+        if (Objects.equals(opKind.toString(), "EQ"))
+            sb.append("==");
+        if (Objects.equals(opKind.toString(), "LE"))
+            sb.append("<=");
+        if (Objects.equals(opKind.toString(), "GE"))
+            sb.append(">=");
+        if (Objects.equals(opKind.toString(), "AND"))
+            sb.append("&&");
+        if (Objects.equals(opKind.toString(), "BITAND"))
+            sb.append("&");
+        if (Objects.equals(opKind.toString(), "BITOR"))
+            sb.append("|");
+        if (Objects.equals(opKind.toString(), "OR"))
+            sb.append("||");
+        if (Objects.equals(opKind.toString(), "EXP"))
+            sb.append("**");
+        if (Objects.equals(opKind.toString(), "BLOCK_OPEN"))
+            sb.append("<:");
+        if (Objects.equals(opKind.toString(), "BLOCK_CLOSE"))
+            sb.append(":>");
+        if (Objects.equals(opKind.toString(), "RETURN"))
+            sb.append("^");
+        if (Objects.equals(opKind.toString(), "RARROW"))
+            sb.append("->");
+        if (Objects.equals(opKind.toString(), "BOX"))
+            sb.append("[]");
     if (Objects.equals(opKind.toString(), "MINUS"))
             sb.append("-");
     if (Objects.equals(opKind.toString(), "BANG"))
@@ -441,6 +495,10 @@ return null;
         if (Objects.equals(opKind.toString(), "MOD"))
         {
             sb.append("%");
+        }
+        if (Objects.equals(opKind.toString(), "TIMES"))
+        {
+            sb.append("*");
         }
 
         Expr e = unaryExpr.getExpr();
