@@ -185,6 +185,10 @@ return null;
             {
                 sb.append("%");
             }
+            if (binaryExpr.getOp().kind()==Kind.EQ)
+            {
+                sb.append("==");
+            }
           //  if (binaryExpr.getOp().text()=="+")
            // {
             //.    sb.append("+");
