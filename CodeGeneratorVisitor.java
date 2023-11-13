@@ -163,11 +163,22 @@ return null;
                 sb.append("=");
             }
 
-
            if (binaryExpr.getOp().kind()==Kind.PLUS)
            {
                sb.append("+");
            }
+            if (binaryExpr.getOp().kind()==Kind.GE)
+            {
+                sb.append(">=");
+            }
+            if (binaryExpr.getOp().kind()==Kind.LE)
+            {
+                sb.append("<=");
+            }
+            if (binaryExpr.getOp().kind()==Kind.DIV)
+            {
+                sb.append("/");
+            }
           //  if (binaryExpr.getOp().text()=="+")
            // {
             //.    sb.append("+");
@@ -316,7 +327,7 @@ return null;
 
 
             sb.append(" ");
-            
+
         sb.append(varName);
         return null;
     }
@@ -391,22 +402,21 @@ return null;
         sb.append("ConsoleIO.write(");
         Object value = writeStatement.getExpr().visit(this, arg);
 
-
         // Append the value to the Java code.
         sb.append("); ");
-
+       // String s = ConsoleIO.write();
 
         return null;
     }
 
     @Override
     public Object visitBooleanLitExpr(BooleanLitExpr booleanLitExpr, Object arg) throws PLCCompilerException {
-        if (Objects.equals(booleanLitExpr.getText(), "false"))
+        if (Objects.equals(booleanLitExpr.getText(), "FALSE"))
         {
-            sb.append("false");
+            sb.append("isfalse");
         }
         else {
-            sb.append("true");
+            sb.append("istrue");
         }
         return null;
     }
