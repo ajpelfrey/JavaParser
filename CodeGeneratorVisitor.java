@@ -189,6 +189,10 @@ return null;
             {
                 sb.append("==");
             }
+            if (binaryExpr.getOp().kind()==Kind.AND)
+            {
+                sb.append("&&");
+            }
           //  if (binaryExpr.getOp().text()=="+")
            // {
             //.    sb.append("+");
