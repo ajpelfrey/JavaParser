@@ -193,6 +193,10 @@ return null;
             {
                 sb.append("&&");
             }
+            if (binaryExpr.getOp().kind()==Kind.OR)
+            {
+                sb.append("||");
+            }
           //  if (binaryExpr.getOp().text()=="+")
            // {
             //.    sb.append("+");
