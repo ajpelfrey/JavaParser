@@ -340,7 +340,7 @@ public class Parser implements IParser {
 
 		while (isKind(Kind.TIMES) || isKind(Kind.DIV) || isKind(Kind.MOD)) { //should be
 
-			op = prev();
+			op = t;
 			consume();
 
 			rightExpr = unaryExpr();
