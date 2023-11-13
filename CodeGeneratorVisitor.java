@@ -413,10 +413,10 @@ return null;
     public Object visitBooleanLitExpr(BooleanLitExpr booleanLitExpr, Object arg) throws PLCCompilerException {
         if (Objects.equals(booleanLitExpr.getText(), "FALSE"))
         {
-            sb.append("isfalse");
+            sb.append("false");
         }
         else {
-            sb.append("istrue");
+            sb.append("true");
         }
         return null;
     }
