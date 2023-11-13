@@ -148,6 +148,38 @@ return null;
         else {
             sb.append("(");
             binaryExpr.getLeftExpr().visit(this,arg);
+           
+            if (binaryExpr.getOp().kind()==Kind.RETURN) //TODO add all cases
+            {
+                sb.append("^");
+            } if (binaryExpr.getOp().kind()==Kind.MINUS) //TODO add all cases
+            {
+                sb.append("-");
+            }
+            if (binaryExpr.getOp().kind()==Kind.TIMES) //TODO add all cases
+            {
+                sb.append("*");
+            }
+            if (binaryExpr.getOp().kind()==Kind.EXP) //TODO add all cases
+            {
+                sb.append("**");
+            }
+
+            if (binaryExpr.getOp().kind()==Kind.BLOCK_OPEN) //TODO add all cases
+            {
+                sb.append("<:");
+            }
+            if (binaryExpr.getOp().kind()==Kind.BLOCK_CLOSE) //TODO add all cases
+            {
+                sb.append(":>");
+            }if (binaryExpr.getOp().kind()==Kind.RARROW) //TODO add all cases
+            {
+                sb.append("->");
+            }
+            if (binaryExpr.getOp().kind()==Kind.BOX) //TODO add all cases
+            {
+                sb.append("[]");
+            }
           if (binaryExpr.getOp().kind()==Kind.GT) //TODO add all cases
           {
               sb.append(">");
