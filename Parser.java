@@ -319,6 +319,8 @@ public class Parser implements IParser {
 			consume();
 
 			rightExpr = multiplicativeExpr();
+			if (t.kind()==RPAREN){
+			consume();}
 
 			leftExpr = new BinaryExpr(firstToken, leftExpr, op, rightExpr);
 
@@ -348,6 +350,7 @@ public class Parser implements IParser {
 			leftExpr = new BinaryExpr(firstToken, leftExpr, op, rightExpr);
 
 		}
+		//consume();
 
 		return leftExpr;
 
@@ -672,7 +675,7 @@ public class Parser implements IParser {
 
 		if (!matches(kind)) {
 
-			throw new SyntaxException("not right kind for AST");
+			throw new SyntaxException("not right kind for AST"+"expected type "+kind+"actual"+t.kind());
 
 		}
 
