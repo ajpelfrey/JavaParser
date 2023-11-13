@@ -132,6 +132,7 @@ return null;
             sb.append(".equals(");
             binaryExpr.getRightExpr().visit(this,arg);
             sb.append(")");
+            return null;
         }
 
         if (binaryExpr.getOp().kind()==Kind.EXP)
@@ -141,6 +142,7 @@ return null;
             sb.append(",");
             binaryExpr.getRightExpr().visit(this, arg);
             sb.append(")))");
+            return null;
         }
 
         else {
@@ -178,6 +180,10 @@ return null;
             if (binaryExpr.getOp().kind()==Kind.DIV)
             {
                 sb.append("/");
+            }
+            if (binaryExpr.getOp().kind()==Kind.MOD)
+            {
+                sb.append("%");
             }
           //  if (binaryExpr.getOp().text()=="+")
            // {
@@ -363,6 +369,7 @@ return null;
     @Override
     public Object visitStringLitExpr(StringLitExpr stringLitExpr, Object arg) throws PLCCompilerException {
         sb.append(stringLitExpr.getText());
+      //  sb.append(";");
         return null;
         //        throw new TypeCheckException("visitStringLitExpr");
     }
