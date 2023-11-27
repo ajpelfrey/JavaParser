@@ -65,7 +65,7 @@ public class TypeCheckVisitor implements ASTVisitor {
             type = Type.kind2type(nameDef.getTypeToken().kind());
         }
             else throw new TypeCheckException("wrong type of namedef");
-//////
+
         String varName = nameDef.getName();
 
             if (declaredVariables.contains(nameDef.getName())) {
@@ -110,9 +110,9 @@ public class TypeCheckVisitor implements ASTVisitor {
             Dimension dimension = (Dimension) nameDef.getDimension().visit(this, arg);
             return nameDef.getType();
         }
-        if (!((d==null)||(d.getType()==nameDef.getType())||(d.getType()==Type.STRING&&nameDef.getType()==Type.IMAGE))){
-            throw new TypeCheckException("name");
-        }
+        //if (!((d==null)||(d.getType()==nameDef.getType())||(d.getType()==Type.STRING&&nameDef.getType()==Type.IMAGE))){
+         //   throw new TypeCheckException("name");
+       // }
         else {
             return nameDef.getType();
         }
@@ -363,22 +363,25 @@ binaryExpr.setType(inferBinaryType);
 
         //if (expandedPixelExpr.getRed().getType()==Type.I);
 
-        Type red = (Type) expandedPixelExpr.getRed().visit(this, arg);
-
-        if (red != Type.INT) {
-            throw new TypeCheckException("Exprred expression must be of type INT."+expandedPixelExpr.getRed().getType());
+     //   Type red = (Type) expandedPixelExpr.getRed().visit(this, arg);
+expandedPixelExpr.getRed().visit(this,arg);
+//if (expandedPixelExpr.get)
+        expandedPixelExpr.getRed().setType(expandedPixelExpr.getRed().getType());
+        if (expandedPixelExpr.getRed().getType() != Type.INT&&expandedPixelExpr.getRed().getType() != Type.PIXEL) {
+            throw new TypeCheckException(("Exprred expression must be of type INT.")+expandedPixelExpr.getRed().getType());
         }
+
         Type green = (Type) expandedPixelExpr.getGreen().visit(this, arg);
 
 
-        if (green != Type.INT) {
+       /* if (green != Type.INT) {
             throw new TypeCheckException("Exprgreen expression must be of type INT.");
-        }
+        }*/
         Type blue = (Type) expandedPixelExpr.getBlue().visit(this, arg);
 
-        if (blue != Type.INT) {
+       /* if (blue != Type.INT) {
             throw new TypeCheckException("Exprblue expression must be of type INT.");
-        }
+        }*/
 
         // Set the type of the ExpandedPixelExpr node to PIXEL.
         expandedPixelExpr.setType(Type.PIXEL);
@@ -402,6 +405,7 @@ binaryExpr.setType(inferBinaryType);
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCCompilerException {
         // Get the symbol table.
         SymbolTable symbolTable = st;
+String uniqueVarName=null;
 
         // Check if the IdentExpr name is defined in the symbol table.
         NameDef n = symbolTable.lookup(identExpr.getName());
@@ -410,6 +414,7 @@ binaryExpr.setType(inferBinaryType);
         if (n == null) {
             throw new TypeCheckException("Undeclared identifier"+identExpr.getName()+identExpr.getType());
         }
+
 
         // Assign the IdentExpr name definition and type to the IdentExpr object.
         identExpr.setNameDef(n);
@@ -453,6 +458,7 @@ binaryExpr.setType(inferBinaryType);
 
         String name = lValue.getName();
         NameDef symbolDef = st.lookup(name);
+       
         if (symbolDef == null) {
             throw new PLCCompilerException("LValue name not found in symbol table: " + name);
         }
@@ -504,7 +510,7 @@ binaryExpr.setType(inferBinaryType);
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws PLCCompilerException {
 
 
-        if (pixelSelector.xExpr().firstToken.kind()==Kind.NUM_LIT||pixelSelector.xExpr().firstToken.kind()==Kind.IDENT)
+        if (pixelSelector.xExpr()!=null&&pixelSelector.xExpr().firstToken.kind()==Kind.NUM_LIT||pixelSelector.xExpr().firstToken.kind()==Kind.IDENT)
         {
             if (pixelSelector.xExpr().firstToken.kind()==Kind.IDENT)
             {
@@ -517,7 +523,7 @@ binaryExpr.setType(inferBinaryType);
             }
             pixelSelector.xExpr().setType(Type.INT);
         }
-        if (pixelSelector.yExpr().firstToken.kind()==Kind.NUM_LIT||pixelSelector.yExpr().firstToken.kind()==Kind.IDENT)
+        if (pixelSelector.yExpr()!=null&&pixelSelector.yExpr().firstToken.kind()==Kind.NUM_LIT||pixelSelector.yExpr().firstToken.kind()==Kind.IDENT)
         {
             if (pixelSelector.yExpr().firstToken.kind()==Kind.IDENT)
             {
@@ -542,17 +548,21 @@ return null;
 
     @Override
     public Object visitPostfixExpr(PostfixExpr postfixExpr, Object arg) throws PLCCompilerException {
+        PixelSelector pixelSelector = postfixExpr.pixel();
 
-        visitPixelSelector(postfixExpr.pixel(), arg);
+        postfixExpr.primary().visit(this,arg);
+        postfixExpr.primary().setType(postfixExpr.primary().getType());
+        //visitPixelSelector(postfixExpr.pixel(), arg);
+if (pixelSelector!=null){
 
+        postfixExpr.pixel().visit(this,arg);
 
-        Type type = null;
-type = inferPostFixExprType(postfixExpr);
-if (type!=null)
-{
-
+}
+    Type type;
+    type = inferPostFixExprType(postfixExpr);
+    if (type!=null)
+    {
     postfixExpr.setType(type);
-   // postfixExpr.primary().setType();
     return type;
 }
 
@@ -580,7 +590,7 @@ if (type!=null)
         {
             return Type.INT;
         }
-        if(pixel==null&&Channel==null)
+        if(pixel==null&&Channel.color()==null)
         {
             return primary.getType();
         }
@@ -588,7 +598,7 @@ if (type!=null)
         {
             return Type.PIXEL;
         }
-        return null;
+        return primary.getType();
     }
 
 
