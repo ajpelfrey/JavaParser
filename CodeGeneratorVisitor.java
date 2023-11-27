@@ -3,6 +3,10 @@ import edu.ufl.cise.cop4020fa23.ast.*;
 import edu.ufl.cise.cop4020fa23.exceptions.PLCCompilerException;
 import edu.ufl.cise.cop4020fa23.exceptions.TypeCheckException;
 import edu.ufl.cise.cop4020fa23.runtime.ConsoleIO;
+import edu.ufl.cise.cop4020fa23.runtime.PixelOps;
+import java.awt.Color;
+
+
 
 import java.util.*;
 import java.lang.*;
@@ -11,9 +15,10 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     private Map<String, Integer> declaredVariableCounts = new HashMap<>();
     private String writeString;
+    String toPrint=null;
 
     private int counter = 1;
-  //  private int n = counter;
+    //  private int n = counter;
     private SymbolTable symbolTable;
     private String packageName;
     String nameDef = "";
@@ -35,6 +40,10 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
         sb.append("package edu.ufl.cise.cop4020fa23;");
         sb.append("import edu.ufl.cise.cop4020fa23.runtime.ConsoleIO;\n");
+        sb.append("import edu.ufl.cise.cop4020fa23.runtime.PixelOps;\n");
+        sb.append("import java.awt.image.BufferedImage;\n");
+        sb.append("import edu.ufl.cise.cop4020fa23.runtime.ImageOps;");
+        sb.append("import edu.ufl.cise.cop4020fa23.runtime.FileURLIO;");
 
         if (program.getType()==Type.STRING)
         {
@@ -47,8 +56,17 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         String  type = program.getTypeToken().text();
         if (program.getType()==Type.STRING)
         {
-           type ="String";
+            type ="String";
         }
+        if (program.getType()==Type.PIXEL)
+        {
+            type ="int";
+        }
+        if (program.getType()==Type.IMAGE)
+        {
+            type ="BufferedImage";
+        }
+
         sb.append("public static ").append(type).append(" apply(");
 
         List <NameDef> params = program.getParams();
@@ -68,12 +86,24 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                             sb.append(", ");
                         }
                     }
-                    else {
+                    if (Objects.equals(e, "true")) {
+                        sb.append(" istrue");
                         if (params.indexOf(param) != params.size() - 1) {
 
                             sb.append(", ");
                         }
-                        sb.append(param.getName());
+
+                    }
+
+                    else {
+                        if (params.indexOf(param) != params.size() - 1) {
+                            sb.append(param.getName());
+                            sb.append(", ");
+                        }
+                        else{
+                            sb.append(param.getName());
+                        }
+
                     }
 
 
@@ -91,6 +121,16 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                 if (nametype==Type.STRING)
                 {
                     sb.append("String ");
+                    sb.append(param.getName());
+                    if (params.indexOf(param) != params.size() - 1) {
+
+                        sb.append(", ");
+                    }
+
+                }
+                if (nametype==Type.PIXEL)
+                {
+                    sb.append("int ");
                     sb.append(param.getName());
                     if (params.indexOf(param) != params.size() - 1) {
 
@@ -118,15 +158,79 @@ public class CodeGeneratorVisitor implements ASTVisitor {
     public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws PLCCompilerException {
 
         assignmentStatement.getlValue().visit(this,arg);
+        if (assignmentStatement.getlValue().getType() ==Type.PIXEL&&assignmentStatement.getlValue().getChannelSelector()!=null)
+        {
+            sb.append(" = ");
+            assignmentStatement.getlValue().getChannelSelector().visit(this,arg);
+            sb.append(assignmentStatement.getlValue().firstToken.text());
+            sb.append(",");
+            assignmentStatement.getE().visit(this,arg);
+
+            sb.append(");");
+            return null;
+        }
+
+
+
+        if (assignmentStatement.getlValue().getType()==Type.PIXEL&&assignmentStatement.getE().getType()==Type.INT)
+        {
+            // assignmentStatement.getlValue().visit(this,arg);
+            sb.append("=");
+            sb.append("PixelOps.pack(");
+            assignmentStatement.getE().visit(this,arg);
+            sb.append(",");
+            assignmentStatement.getE().visit(this,arg);
+            sb.append(",");
+            assignmentStatement.getE().visit(this,arg);
+            sb.append(");");
+            return null;
+        }
+      /*  if (( assignmentStatement.getlValue().getType()==Type.PIXEL)&&(assignmentStatement.getlValue().getChannelSelector()!=null))
+        {
+            sb.append("PixelOps.setGreen(");
+            assignmentStatement.getlValue().visit(this,arg);
+            sb.append(",");
+            assignmentStatement.getE().visit(this,arg);
+            sb.append(")");
+        }*/
+        //  else
+
+        //        assignmentStatement.getlValue().visit(this,arg);
         sb.append("=");
-        assignmentStatement.getE().visit(this,arg);
+        assignmentStatement.getE().visit(this,arg); //should be expanded pixel for num 6
         sb.append(";");
-return null;
-      //  throw new TypeCheckException("visitAssignmentStatement");
+        return null;
+        //  throw new TypeCheckException("visitAssignmentStatement");
     }
 
     @Override
     public Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws PLCCompilerException {
+
+        if (binaryExpr.getOp().kind()==Kind.PLUS)
+        {
+
+            if (binaryExpr.getLeftExpr().getType()==Type.PIXEL&&binaryExpr.getRightExpr().getType()==Type.PIXEL)
+            {
+                sb.append("(");
+                sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
+                binaryExpr.getLeftExpr().visit(this,arg);
+
+                ///   sb.append(binaryExpr.getLeftExpr().toString());
+                sb.append(",");
+                binaryExpr.getRightExpr().visit(this,arg);
+
+
+
+                sb.append(")");
+                sb.append(")");
+
+                return null;
+
+            }
+        }
+
+
+
         if (binaryExpr.getLeftExpr().getType() == Type.STRING && binaryExpr.getOp().kind() == Kind.EQ)
         {
             binaryExpr.getLeftExpr().visit(this, arg);
@@ -147,93 +251,98 @@ return null;
         }
 
         else {
-            sb.append("(");
-            binaryExpr.getLeftExpr().visit(this,arg);
+            if ((binaryExpr.getOp().kind()==Kind.MINUS)){
+                binaryExpr.getLeftExpr().visit(this, arg);
 
-            if (binaryExpr.getOp().kind()==Kind.RETURN) //TODO add all cases
-            {
-                sb.append("^");
-            } if (binaryExpr.getOp().kind()==Kind.MINUS) //TODO add all cases
-            {
                 sb.append("-");
+                binaryExpr.getRightExpr().visit(this,arg);
+                return null;
             }
-            if (binaryExpr.getOp().kind()==Kind.TIMES) //TODO add all cases
-            {
-                sb.append("*");
-            }
-            if (binaryExpr.getOp().kind()==Kind.EXP) //TODO add all cases
-            {
-                sb.append("**");
-            }
-
-            if (binaryExpr.getOp().kind()==Kind.BLOCK_OPEN) //TODO add all cases
-            {
-                sb.append("<:");
-            }
-            if (binaryExpr.getOp().kind()==Kind.BLOCK_CLOSE) //TODO add all cases
-            {
-                sb.append(":>");
-            }if (binaryExpr.getOp().kind()==Kind.RARROW) //TODO add all cases
-            {
-                sb.append("->");
-            }
-            if (binaryExpr.getOp().kind()==Kind.BOX) //TODO add all cases
-            {
-                sb.append("[]");
-            }
-          if (binaryExpr.getOp().kind()==Kind.GT) //TODO add all cases
-          {
-              sb.append(">");
-          }
-            if (binaryExpr.getOp().kind()==Kind.LT) //TODO add all cases
-            {
-                sb.append("<");
-            }
-            if (binaryExpr.getOp().kind()==Kind.MINUS) //TODO add all cases
-            {
-                sb.append("-");
-            }
-            if (binaryExpr.getOp().kind()==Kind.ASSIGN) //TODO add all cases
-            {
-                sb.append("=");
+            if ((binaryExpr.getOp().kind()==Kind.GT)){
+                // binaryExpr.getLeftExpr().visit(this, arg);
+                sb.append(binaryExpr.getLeftExpr().firstToken().text());
+                sb.append(">");
+                binaryExpr.getRightExpr().visit(this,arg);
+                return null;
             }
 
-           if (binaryExpr.getOp().kind()==Kind.PLUS)
-           {
-               sb.append("+");
-           }
-            if (binaryExpr.getOp().kind()==Kind.GE)
-            {
-                sb.append(">=");
+            else {
+                sb.append("(");
+                binaryExpr.getLeftExpr().visit(this, arg);
+
+                if (binaryExpr.getOp().kind() == Kind.RETURN) //TODO add all cases
+                {
+                    sb.append("^");
+                }
+                if (binaryExpr.getOp().kind() == Kind.TIMES) //TODO add all cases
+                {
+                    sb.append("*");
+                }
+                if (binaryExpr.getOp().kind() == Kind.EXP) //TODO add all cases
+                {
+                    sb.append("**");
+                }
+
+
+                if (binaryExpr.getOp().kind() == Kind.BLOCK_OPEN) //TODO add all cases
+                {
+                    sb.append("<:");
+                }
+                if (binaryExpr.getOp().kind() == Kind.BLOCK_CLOSE) //TODO add all cases
+                {
+                    sb.append(":>");
+                }
+                if (binaryExpr.getOp().kind() == Kind.RARROW) //TODO add all cases
+                {
+                    sb.append("->");
+                }
+                if (binaryExpr.getOp().kind() == Kind.BOX) //TODO add all cases
+                {
+                    sb.append("[]");
+                }
+                if (binaryExpr.getOp().kind() == Kind.GT) //TODO add all cases
+                {
+                    sb.append(">");
+                }
+                if (binaryExpr.getOp().kind() == Kind.LT) //TODO add all cases
+                {
+                    sb.append("<");
+                }
+
+                if (binaryExpr.getOp().kind() == Kind.ASSIGN) //TODO add all cases
+                {
+                    sb.append("=");
+                }
+
+                if (binaryExpr.getOp().kind() == Kind.PLUS) {
+                    sb.append("+");
+                }
+                if (binaryExpr.getOp().kind() == Kind.GE) {
+                    sb.append(">=");
+                }
+                if (binaryExpr.getOp().kind() == Kind.LE) {
+                    sb.append("<=");
+                }
+                if (binaryExpr.getOp().kind() == Kind.DIV) {
+                    sb.append("/");
+                }
+                if (binaryExpr.getOp().kind() == Kind.MOD) {
+                    sb.append("%");
+                }
+                if (binaryExpr.getOp().kind() == Kind.EQ) {
+                    sb.append("==");
+                }
+                if (binaryExpr.getOp().kind() == Kind.AND) {
+                    sb.append("&&");
+                }
+                if (binaryExpr.getOp().kind() == Kind.OR) {
+                    sb.append("||");
+                }
             }
-            if (binaryExpr.getOp().kind()==Kind.LE)
-            {
-                sb.append("<=");
-            }
-            if (binaryExpr.getOp().kind()==Kind.DIV)
-            {
-                sb.append("/");
-            }
-            if (binaryExpr.getOp().kind()==Kind.MOD)
-            {
-                sb.append("%");
-            }
-            if (binaryExpr.getOp().kind()==Kind.EQ)
-            {
-                sb.append("==");
-            }
-            if (binaryExpr.getOp().kind()==Kind.AND)
-            {
-                sb.append("&&");
-            }
-            if (binaryExpr.getOp().kind()==Kind.OR)
-            {
-                sb.append("||");
-            }
-          //  if (binaryExpr.getOp().text()=="+")
-           // {
+            //  if (binaryExpr.getOp().text()=="+")
+            // {
             //.    sb.append("+");
-           // }
+            // }
             binaryExpr.getRightExpr().visit(this,arg);
             sb.append(")");
         }
@@ -265,7 +374,27 @@ return null;
 
     @Override
     public Object visitChannelSelector(ChannelSelector channelSelector, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitChannelSelector");
+//if (channelSelector.)
+        // if (channelSelector.)
+        // sb.append("PixelOps.setRed(")
+        if (channelSelector.color()==Kind.RES_green)
+        {
+            sb.append("PixelOps.setGreen(");
+
+        }
+        if  (channelSelector.color()==Kind.RES_red)
+        {
+            sb.append("PixelOps.setRed(");
+            return null;
+
+        }
+        if (channelSelector.color()==Kind.RES_blue)
+        {
+            sb.append("PixelOps.setBlue(");
+            return null;
+
+        }
+        return null;
     }
 
     @Override
@@ -282,10 +411,32 @@ return null;
 
     @Override
     public Object visitDeclaration(Declaration declaration, Object arg) throws PLCCompilerException {
-      declaration.getNameDef().visit(this,arg);
 
-      //sb.append("=");
-       // declaration.getInitializer().visit(this,arg);
+        declaration.getNameDef().visit(this,arg);
+
+        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() == null) {
+            sb.append("= ImageOps.cloneImage(");
+            declaration.getInitializer().visit(this, arg);
+            sb.append(");");
+            return null;
+        }
+        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() != null) {
+            sb.append("= ImageOps.copyAndResize(");
+            declaration.getInitializer().visit(this, arg);
+            sb.append(",");
+            declaration.getNameDef().getDimension().visit(this,arg);
+            sb.append(");");
+            return null;
+        }
+
+        else if (declaration.getNameDef().getType()==Type.IMAGE)
+        {
+            sb.append("= FileURLIO.readImage(");
+            declaration.getInitializer().visit(this,arg);
+            sb.append(");");
+            return null;
+
+        }
 
         if (declaration.getInitializer()==null)
         {
@@ -299,12 +450,18 @@ return null;
             sb.append(";");
         }
 
-      return null;
+        return null;
     }
 
     @Override
     public Object visitDimension(Dimension dimension, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitDimension");
+        dimension.getWidth().visit(this,arg);
+        sb.append(",");
+
+        dimension.getHeight().visit(this,arg);
+
+        return null;
+        //throw new TypeCheckException("visitDimension");
     }
 
     @Override
@@ -314,57 +471,107 @@ return null;
 
     @Override
     public Object visitExpandedPixelExpr(ExpandedPixelExpr expandedPixelExpr, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitExpandedPixelExpr");
+        sb.append("PixelOps.pack(");
+        expandedPixelExpr.getRed().visit(this,arg);
+        sb.append(",");
+        expandedPixelExpr.getGreen().visit(this,arg);
+
+        sb.append(",");
+        expandedPixelExpr.getBlue().visit(this,arg);
+        sb.append(")");
+
+
+        //   throw new TypeCheckException("visitExpandedPixelExpr");
+        return null;
     }
 
     @Override
     public Object visitGuardedBlock(GuardedBlock guardedBlock, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitGuardedBlock");
+        if (guardedBlock.getGuard()!=null)
+        {
+            sb.append("if");
+            sb.append("(");
+
+            //  sb.append(guardedBlock.g],)
+            guardedBlock.getGuard().visit(this,arg);
+            sb.append(")");
+
+        }
+        if (guardedBlock.getBlock()!=null)
+        {
+            sb.append("{ ");
+            guardedBlock.getBlock().visit(this,arg);
+            sb.append("}");
+
+        }
+        return null;
+        //        throw new TypeCheckException("visitGuardedBlock");
     }
 
     @Override
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCCompilerException {
-         if (Objects.equals(identExpr.getNameDef().getName(), "false") || Objects.equals(identExpr.getNameDef().getName(), "isfalse"))
-         {
-             sb.append("isfalse");
-             return null;
-
-         }
-         if (Objects.equals(identExpr.getNameDef().getName(),"INT"))
-         {
-             sb.append("int ");
-             return null;
-         }
-
-
-       /* if (declaredVariables.contains(identExpr.getName()+"$1"))
+        if (identExpr.getName()!=null)
+        if (identExpr.getNameDef()==null)
         {
-            sb.append(identExpr.getNameDef().getName()).append("$").append(identifierCount-1);
-        }*/
-        else
+            sb.append(identExpr.getName());
+            return null;
+        }
+        {if (Objects.equals(identExpr.getNameDef().getName(), "false") || Objects.equals(identExpr.getNameDef().getName(), "isfalse")) {
+            sb.append("isfalse");
+            return null;
+
+        }
+            if (Objects.equals(identExpr.getNameDef().getName(), "true") || Objects.equals(identExpr.getNameDef().getName(), "istrue")) {
+                sb.append("istrue");
+                return null;
+
+            }
+            if (Objects.equals(identExpr.getNameDef().getName(), "INT")) {
+                sb.append("int ");
+                return null;
+            }
+            if (Objects.equals(identExpr.getNameDef().getName(), "string")) {
+                sb.append("String ");
+                return null;
+            }
+        }
+
             sb.append(identExpr.getNameDef().getJavaName());
 
-        //sb.append(identExpr.getNameDef().getName());
-        return identExpr.getNameDef().getJavaName();
+        return null;
     }
 
     @Override
     public Object visitIfStatement(IfStatement ifStatement, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitIfStatement");
+
+        if (ifStatement.getGuardedBlocks()!=null)
+
+        {
+            for (int i =0; i < ifStatement.getGuardedBlocks().size(); i++) {
+
+                if (i!=ifStatement.getGuardedBlocks().size()&&i!=0)
+                {
+                    sb.append("else ");
+                }
+                ifStatement.getGuardedBlocks().get(i).visit(this, arg);
+            }
+        }
+        return null;
     }
 
     @Override
     public Object visitLValue(LValue lValue, Object arg) throws PLCCompilerException {
 
-        if (lValue.firstToken.kind()==Kind.IDENT)
-        {
-          //  int varCount = declaredVariableCounts.getOrDefault(lValue.firstToken.text(), identifierCount);
+
+
+        if (lValue.firstToken.kind()==Kind.IDENT) {
 
             sb.append(lValue.firstToken.text());
+            //   lValue.g
         }
 
-       return null;
-        //  throw new T;ypeCheckException("visitLValue");
+
+        return null;
     }
     private int identifierCount = 1;
     List<String> declaredVariables = new ArrayList<>();
@@ -372,13 +579,33 @@ return null;
     @Override
     public Object visitNameDef(NameDef nameDef, Object arg) throws PLCCompilerException {
 
-
-
-            sb.append(nameDef.getType().name().toLowerCase());
+        if (nameDef.getType()==Type.IMAGE)
+        {
+            sb.append("BufferedImage");
             String varName = nameDef.getJavaName();
 
 
             sb.append(" ");
+
+            sb.append(varName);
+            return null;
+
+        }
+        if (nameDef.getType()==Type.STRING)
+        {
+            sb.append("String");
+
+        }if (nameDef.getType()==Type.PIXEL)
+        {
+            sb.append("int");
+
+        }
+        else{
+            sb.append(nameDef.getType().name().toLowerCase());}
+        String varName = nameDef.getJavaName();
+
+
+        sb.append(" ");
 
         sb.append(varName);
         return null;
@@ -386,18 +613,38 @@ return null;
 
     @Override
     public Object visitNumLitExpr(NumLitExpr numLitExpr, Object arg) throws PLCCompilerException {
-           sb.append(numLitExpr.firstToken.text());
+        sb.append(numLitExpr.firstToken.text());
         return null;
     }
 
     @Override
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitPixelSelector");
+
+        sb.append(pixelSelector.toString());
+        return null;
+        //     throw new TypeCheckException("visitPixelSelector");
     }
 
     @Override
     public Object visitPostfixExpr(PostfixExpr postfixExpr, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitPostfixExpr");
+        if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_red)){
+
+            sb.append("PixelOps.red(");
+            sb.append(postfixExpr.primary().firstToken().text());
+            sb.append(")");
+        }
+        if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_green)){
+            sb.append("PixelOps.green(");
+            sb.append(postfixExpr.primary().firstToken().text());
+            sb.append(")");
+        }
+        if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_blue)){
+            sb.append("PixelOps.blue(");
+            sb.append(postfixExpr.primary().firstToken().text());
+            sb.append(")");
+        }
+        return null;
+        //        throw new TypeCheckException("visitPostfixExpr");
     }
 
 
@@ -407,7 +654,7 @@ return null;
         sb.append("return ");
 
         Expr e  = returnStatement.getE();
-         e.visit(this, arg);
+        e.visit(this, arg);
         sb.append(";");
         return null;
     }
@@ -415,20 +662,22 @@ return null;
     @Override
     public Object visitStringLitExpr(StringLitExpr stringLitExpr, Object arg) throws PLCCompilerException {
         sb.append(stringLitExpr.getText());
-      //  sb.append(";");
-        return null;
+        toPrint = stringLitExpr.getText();
+        //  sb.append(";");
+        return stringLitExpr;
         //        throw new TypeCheckException("visitStringLitExpr");
     }
 
     @Override
     public Object visitUnaryExpr(UnaryExpr unaryExpr, Object arg) throws PLCCompilerException {
-        sb.append("(");
+
         Kind opKind = unaryExpr.getOp();
 
-
+        sb.append("(");
 
 
         if (Objects.equals(opKind.toString(), "SEMI"))
+
             sb.append(";");
         if (Objects.equals(opKind.toString(), "COMMA"))
             sb.append(",");
@@ -478,9 +727,9 @@ return null;
             sb.append("->");
         if (Objects.equals(opKind.toString(), "BOX"))
             sb.append("[]");
-    if (Objects.equals(opKind.toString(), "MINUS"))
-            sb.append("-");
-    if (Objects.equals(opKind.toString(), "BANG"))
+        if (Objects.equals(opKind.toString(), "MINUS")){
+            sb.append("-");}
+        if (Objects.equals(opKind.toString(), "BANG"))
         {
             sb.append("!");
         }
@@ -502,7 +751,7 @@ return null;
         }
 
         Expr e = unaryExpr.getExpr();
-          e.visit(this, arg);
+        e.visit(this, arg);
         sb.append(")");
         return null;
     }
@@ -513,16 +762,16 @@ return null;
         sb.append("ConsoleIO.write(");
         Object value;
         value= writeStatement.getExpr().visit(this, arg);
-        ConsoleIO.write(value.toString());
+        // Expr e = writeStatement.getExpr();
+        //      ConsoleIO.write("\"hello\"");
 
-        Object temp = value;
 
         // Append the value to the Java code.
         sb.append("); ");
-       // String s = ConsoleIO.write();
-     //   String tempString = temp.toString();
-    //    ConsoleIO.write(tempString);
-        return null;
+        // String s = ConsoleIO.write();
+        //   String tempString = temp.toString();
+        //    ConsoleIO.write(tempString);
+        return value;
     }
 
     @Override
@@ -539,6 +788,39 @@ return null;
 
     @Override
     public Object visitConstExpr(ConstExpr constExpr, Object arg) throws PLCCompilerException {
-throw new TypeCheckException("visitConstExpr");
+//throw new TypeCheckException("visitConstExpr");
+        String text = constExpr.firstToken.text();
+        String hex = null;
+
+        if (Objects.equals(constExpr.getName(), "Z"))
+        {
+            hex = "255";
+            //sb.append("255");
+        }
+        else {
+            if (Objects.equals(constExpr.firstToken.text(), "BLUE")) {
+                hex = "0x" + Integer.toHexString(Color.BLUE.getRGB());
+                //   sb.append(hex);
+
+            }
+            if (Objects.equals(constExpr.firstToken.text(), "RED")) {
+                hex = "0x" + Integer.toHexString(Color.RED.getRGB());
+                // sb.append("RED");
+            }
+            if (Objects.equals(constExpr.firstToken.text(), "GREEN")) {
+                hex = "0x" + Integer.toHexString(Color.GREEN.getRGB());
+            }
+            if (Objects.equals(constExpr.firstToken.text(), "PINK")) {
+                hex = "0x" + Integer.toHexString(Color.PINK.getRGB());
+                //    sb.append(hex);
+            }
+            if (Objects.equals(constExpr.firstToken.text(), "MAGENTA")) {
+                hex = "0x" + Integer.toHexString(Color.MAGENTA.getRGB());
+                //    sb.append(hex);
+            }
+        }
+        sb.append(hex);
+
+        return null;
     }
 }
