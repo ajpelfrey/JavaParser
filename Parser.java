@@ -204,6 +204,10 @@ public class Parser implements IParser {
 
 		match(QUESTION);
 		Expr guard = expr();
+		if (t.kind()==RPAREN)
+		{
+			consume();
+		}
 		match(RARROW);
 		Expr trueExpr = expr();
 		match(COMMA);
