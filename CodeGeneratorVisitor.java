@@ -322,7 +322,15 @@ if (inBinaryOP==false){
                 sb.append(binaryExpr.getRightExpr().firstToken.text());
 
                 return null;
+            } if (binaryExpr.getOp().kind()==Kind.TIMES&&binaryExpr.getLeftExpr().getType()==Type.IMAGE&&binaryExpr.getRightExpr().getType()== Type.INT) {
+                sb.append("ImageOps.OP.TIMES,");
+                sb.append(binaryExpr.getLeftExpr().firstToken.text());
+                sb.append(",");
+                sb.append(binaryExpr.getRightExpr().firstToken.text());
+
+                return null;
             }
+
 
             else {
                 sb.append("(");
@@ -491,6 +499,16 @@ if (inBinaryOP==false){
             sb.append(");");
             return null;
         }
+
+        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() != null) {
+            sb.append("= ImageOps.copyAndResize(");
+            declaration.getInitializer().visit(this, arg);
+            sb.append(",");
+            declaration.getNameDef().getDimension().visit(this,arg);
+            sb.append(");");
+            return null;
+        }
+
         if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.INT && declaration.getNameDef().getDimension() == null) {
             sb.append("= ImageOps.cloneImage((");
             //if ( declaration.getInitializer().)
@@ -505,14 +523,7 @@ if (inBinaryOP==false){
             sb.append(");;");
             return null;
         }
-        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() != null) {
-            sb.append("= ImageOps.copyAndResize(");
-            declaration.getInitializer().visit(this, arg);
-            sb.append(",");
-            declaration.getNameDef().getDimension().visit(this,arg);
-            sb.append(");");
-            return null;
-        }
+
         if (declaration.getNameDef().getType()==Type.IMAGE&&declaration.getInitializer()==null)
         {
 
@@ -538,12 +549,24 @@ if (inBinaryOP==false){
             sb.append(";");
             return null;
         }
-        if (declaration.firstToken().kind()==Kind.RES_image&&declaration.getNameDef().getTypeToken().kind()==Kind.RES_image)
+        if (declaration.getNameDef().getDimension()==null&&declaration.firstToken().kind()==Kind.RES_image&&declaration.getNameDef().getTypeToken().kind()==Kind.RES_image)
         {
             sb.append("= ImageOps.cloneImage((");
             sb.append("ImageOps.binaryImageScalarOp(");
             declaration.getInitializer().visit(this,arg);
             sb.append(")));");
+            return null;
+
+
+        }
+        if (declaration.getNameDef().getDimension()!=null&&declaration.firstToken().kind()==Kind.RES_image&&declaration.getNameDef().getTypeToken().kind()==Kind.RES_image)
+        {
+            sb.append("=ImageOps.copyAndResize((");
+            sb.append("ImageOps.binaryImageScalarOp(");
+            declaration.getInitializer().visit(this,arg);
+            sb.append(")),");
+            declaration.getNameDef().getDimension().visit(this,arg);
+            sb.append(");");
             return null;
 
 
