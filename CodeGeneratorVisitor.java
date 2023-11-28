@@ -1,1035 +1,733 @@
 package edu.ufl.cise.cop4020fa23;
-import edu.ufl.cise.cop4020fa23.ast.*;
-import edu.ufl.cise.cop4020fa23.ast.Dimension;
 import edu.ufl.cise.cop4020fa23.exceptions.PLCCompilerException;
-import edu.ufl.cise.cop4020fa23.exceptions.TypeCheckException;
-import edu.ufl.cise.cop4020fa23.runtime.ConsoleIO;
-import edu.ufl.cise.cop4020fa23.runtime.ImageOps;
-import edu.ufl.cise.cop4020fa23.runtime.PixelOps;
+import edu.ufl.cise.cop4020fa23.exceptions.SyntaxException;
+import edu.ufl.cise.cop4020fa23.ast.*;
+import edu.ufl.cise.cop4020fa23.exceptions.LexicalException;
+import static edu.ufl.cise.cop4020fa23.Kind.*;
 
-import java.awt.*;
-
-
-import java.awt.image.BufferedImage;
-import java.util.*;
-import java.lang.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-public class CodeGeneratorVisitor implements ASTVisitor {
-
-    private Map<String, Integer> declaredVariableCounts = new HashMap<>();
-    private String writeString;
-    String toPrint=null;
-    Boolean inBinaryOP = false;
-
-    private int counter = 1;
-    //  private int n = counter;
-    private SymbolTable symbolTable;
-    private String packageName;
-    String nameDef = "";
-
-    void setPackageName(String packageName)
-
-    {
-        this.packageName = packageName;
-    }
-    StringBuilder sb = new StringBuilder();
-    String block;
-
-
-    // Program program= ;
-
-    @Override
-    public String visitProgram(Program program, Object arg) throws PLCCompilerException {
-        boolean isLast = true;
-
-        sb.append("package edu.ufl.cise.cop4020fa23;");
-        sb.append("import edu.ufl.cise.cop4020fa23.runtime.ConsoleIO;\n");
-        sb.append("import edu.ufl.cise.cop4020fa23.runtime.PixelOps;\n");
-        sb.append("import java.awt.image.BufferedImage;\n");
-        sb.append("import edu.ufl.cise.cop4020fa23.runtime.ImageOps;");
-        sb.append("import edu.ufl.cise.cop4020fa23.runtime.FileURLIO;");
-
-        if (program.getType()==Type.STRING)
-        {
-            sb.append("import java.lang.*;\n");
-        }
-        //get and append class name
-        String ident = program.getName();
-        sb.append("public class ").append(ident).append("{");
-        //get and append type name
-        String  type = program.getTypeToken().text();
-        if (program.getType()==Type.STRING)
-        {
-            type ="String";
-        }
-        if (program.getType()==Type.PIXEL)
-        {
-            type ="int";
-        }
-        if (program.getType()==Type.IMAGE)
-        {
-            type ="BufferedImage";
-        }
-
-        sb.append("public static ").append(type).append(" apply(");
-
-        List <NameDef> params = program.getParams();
-
-        if (!params.isEmpty()) {
-            for (NameDef param : params) {
-
-                Type nametype = param.getType();
-                if (nametype==Type.BOOLEAN)
-                {
-                    sb.append("boolean ");
-                    String  e = param.getName();
-                    if (Objects.equals(e, "false")) {
-                        sb.append(" isfalse");
-                        if (params.indexOf(param) != params.size() - 1) {
-
-                            sb.append(", ");
-                        }
-                    }
-                    if (Objects.equals(e, "true")) {
-                        sb.append(" istrue");
-                        if (params.indexOf(param) != params.size() - 1) {
-
-                            sb.append(", ");
-                        }
-
-                    }
-
-                    else {
-                        if (params.indexOf(param) != params.size() - 1) {
-                            sb.append(param.getName());
-                            sb.append(", ");
-                        }
-                        else{
-                            sb.append(param.getName());
-                        }
-
-                    }
-
-
-                }
-                if (nametype==Type.INT)
-                {
-                    sb.append("int ");
-                    sb.append(param.getName());
-                    if (params.indexOf(param) != params.size() - 1) {
-
-                        sb.append(", ");
-                    }
-
-                }
-                if (nametype==Type.STRING)
-                {
-                    sb.append("String ");
-                    sb.append(param.getName());
-                    if (params.indexOf(param) != params.size() - 1) {
-
-                        sb.append(", ");
-                    }
-
-                }
-                if (nametype==Type.PIXEL)
-                {
-                    sb.append("int ");
-                    sb.append(param.getName());
-                    if (params.indexOf(param) != params.size() - 1) {
-
-                        sb.append(", ");
-                    }
-
-                }
-            }
-        }
-        sb.append(")");
-        sb.append("{");
+public class Parser implements IParser {
+	final ILexer lexer;
+	private IToken t;
+	List < IToken > tokens = new ArrayList < > ();
+	private int counter = 0;
 
-        Block b = program.getBlock();
-        String block1 = block;
-        String namedefs = "";
-        if (!program.getBlock().getElems().isEmpty()) {
-            b.visit(this,arg);
-        }
-        sb.append("}");
-        sb.append("}");
-
-        return sb.toString();
-    }
-    @Override
-    public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws PLCCompilerException {
-       // Expr height =  assignmentStatement.getlValue().getNameDef().getDimension().getHeight();
+	public Parser(ILexer lexer) throws LexicalException {
+		super();
 
-        if (assignmentStatement.getlValue().getType()==Type.IMAGE&&assignmentStatement.getE().getType()==Type.PIXEL)
-        {
+		this.lexer = lexer;
 
-                sb.append("for (int x=0; x < ");
-                sb.append(assignmentStatement.getlValue().getName());
-                sb.append(".getWidth(); x++) {");
-                sb.append("for (int y=0; y < ");
-                sb.append(assignmentStatement.getlValue().getName());
-                sb.append(".getHeight(); y++) {");
+		t = lexer.next();
 
+		while (t.kind() != Kind.EOF) {
+			tokens.add(t);
+			t = lexer.next();
+		}
+		if (t.kind() == Kind.EOF) {
+			tokens.add(t);
+		}
 
-                sb.append("ImageOps.setRGB(");
-                assignmentStatement.getlValue().visit(this,arg);
-             //   sb.append(assignmentStatement.getlValue().getName());
-                sb.append(",");
-                sb.append("x");
-                sb.append(",");
-                sb.append("y");
-                sb.append(",");
-                sb.append("(");
+		t = tokens.get(0);
+	}
+	@Override
 
-                assignmentStatement.getE().visit(this, arg);
-                sb.append(")");
-                sb.append(")");
+	public AST parse() throws PLCCompilerException {
 
-                sb.append(";");
-                sb.append("}}");
+		AST e = program();
 
-                return null;
-            }
+		return e;
 
+	}
 
-        assignmentStatement.getlValue().visit(this,arg);
+	private AST program() throws SyntaxException, LexicalException {
 
+		IToken type = null;
 
-        if (assignmentStatement.getlValue().getType() ==Type.PIXEL&&assignmentStatement.getlValue().getChannelSelector()!=null)
-        {
-            sb.append(" = ");
-            assignmentStatement.getlValue().getChannelSelector().visit(this,arg);
-            sb.append(assignmentStatement.getlValue().firstToken.text());
-            sb.append(",");
-            assignmentStatement.getE().visit(this,arg);
-
-            sb.append(");");
-            return null;
-        }
-
-
-
-        if (assignmentStatement.getlValue().getType()==Type.PIXEL&&assignmentStatement.getE().getType()==Type.INT)
-        {
-            // assignmentStatement.getlValue().visit(this,arg);
-            sb.append("=");
-            sb.append("PixelOps.pack(");
-            assignmentStatement.getE().visit(this,arg);
-            sb.append(",");
-            assignmentStatement.getE().visit(this,arg);
-            sb.append(",");
-            assignmentStatement.getE().visit(this,arg);
-            sb.append(");");
-            return null;
-        }
-
-        sb.append("=");
-        assignmentStatement.getE().visit(this,arg); //should be expanded pixel for num 6
-        sb.append(";");
-        return null;
-        //  throw new TypeCheckException("visitAssignmentStatement");
-    }
-
-    @Override
-    public Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws PLCCompilerException {
-if (inBinaryOP==false){
-
-
-
-
-
-        if (binaryExpr.getOp().kind()==Kind.PLUS) {
-
-
-
-            if (binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.PIXEL) {
-                sb.append("(");
-                if (binaryExpr.getOp().kind()==Kind.PLUS) {
-                    sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
-                }
-
-                binaryExpr.getLeftExpr().visit(this, arg);
-
-                ///   sb.append(binaryExpr.getLeftExpr().toString());
-                sb.append(",");
-                binaryExpr.getRightExpr().visit(this, arg);
-
-
-                sb.append(")");
-                sb.append(")");
-
-                return null;
-
-            }
-        }
-
-        }
-
-
-
-        if (binaryExpr.getLeftExpr().getType() == Type.STRING && binaryExpr.getOp().kind() == Kind.EQ)
-        {
-            binaryExpr.getLeftExpr().visit(this, arg);
-            sb.append(".equals(");
-            binaryExpr.getRightExpr().visit(this,arg);
-            sb.append(")");
-            return null;
-        }
-
-        if (binaryExpr.getOp().kind()==Kind.EXP)
-        {
-            sb.append("((int)Math.round(Math.pow(");
-            binaryExpr.getLeftExpr().visit(this, arg);
-            sb.append(",");
-            binaryExpr.getRightExpr().visit(this, arg);
-            sb.append(")))");
-            return null;
-        }
-
-        else {
-            if ((binaryExpr.getOp().kind()==Kind.MINUS)){
-                binaryExpr.getLeftExpr().visit(this, arg);
-
-                sb.append("-");
-                binaryExpr.getRightExpr().visit(this,arg);
-                return null;
-            }
-            if ((binaryExpr.getOp().kind()==Kind.GT)){
-                // binaryExpr.getLeftExpr().visit(this, arg);
-                sb.append(binaryExpr.getLeftExpr().firstToken().text());
-                sb.append(">");
-                binaryExpr.getRightExpr().visit(this,arg);
-                return null;
-            }
-            if (binaryExpr.getOp().kind()==Kind.PLUS&&binaryExpr.getLeftExpr().getType()==Type.IMAGE&&binaryExpr.getRightExpr().getType()==Type.IMAGE)
-            {
-                sb.append("ImageOps.OP.PLUS,");
-                        sb.append(binaryExpr.getLeftExpr().firstToken.text());
-                        sb.append(",");
-                sb.append(binaryExpr.getRightExpr().firstToken.text());
-                sb.append("))");
-                return null;
-
-
-            }
-            if (binaryExpr.getOp().kind()==Kind.DIV&&binaryExpr.getLeftExpr().getType()==Type.IMAGE&&binaryExpr.getRightExpr().getType()== Type.INT) {
-                sb.append("ImageOps.OP.DIV,");
-                sb.append(binaryExpr.getLeftExpr().firstToken.text());
-                sb.append(",");
-                sb.append(binaryExpr.getRightExpr().firstToken.text());
-
-                return null;
-            } if (binaryExpr.getOp().kind()==Kind.TIMES&&binaryExpr.getLeftExpr().getType()==Type.IMAGE&&binaryExpr.getRightExpr().getType()== Type.INT) {
-                sb.append("ImageOps.OP.TIMES,");
-                sb.append(binaryExpr.getLeftExpr().firstToken.text());
-                sb.append(",");
-                sb.append(binaryExpr.getRightExpr().firstToken.text());
-
-                return null;
-            }
-
-
-            else {
-                sb.append("(");
-                binaryExpr.getLeftExpr().visit(this, arg);
-
-                if (binaryExpr.getOp().kind() == Kind.RETURN) //TODO add all cases
-                {
-                    sb.append("^");
-                }
-                if (binaryExpr.getOp().kind() == Kind.TIMES) //TODO add all cases
-                {
-                    sb.append("*");
-                }
-                if (binaryExpr.getOp().kind() == Kind.EXP) //TODO add all cases
-                {
-                    sb.append("**");
-                }
-
-
-                if (binaryExpr.getOp().kind() == Kind.BLOCK_OPEN) //TODO add all cases
-                {
-                    sb.append("<:");
-                }
-                if (binaryExpr.getOp().kind() == Kind.BLOCK_CLOSE) //TODO add all cases
-                {
-                    sb.append(":>");
-                }
-                if (binaryExpr.getOp().kind() == Kind.RARROW) //TODO add all cases
-                {
-                    sb.append("->");
-                }
-                if (binaryExpr.getOp().kind() == Kind.BOX) //TODO add all cases
-                {
-                    sb.append("[]");
-                }
-                if (binaryExpr.getOp().kind() == Kind.GT) //TODO add all cases
-                {
-                    sb.append(">");
-                }
-                if (binaryExpr.getOp().kind() == Kind.LT) //TODO add all cases
-                {
-                    sb.append("<");
-                }
-
-                if (binaryExpr.getOp().kind() == Kind.ASSIGN) //TODO add all cases
-                {
-                    sb.append("=");
-                }
-
-                if (binaryExpr.getOp().kind() == Kind.PLUS) {
-                    sb.append("+");
-                }
-                if (binaryExpr.getOp().kind() == Kind.GE) {
-                    sb.append(">=");
-                }
-                if (binaryExpr.getOp().kind() == Kind.LE) {
-                    sb.append("<=");
-                }
-                if (binaryExpr.getOp().kind() == Kind.DIV) {
-                    sb.append("/");
-                }
-                if (binaryExpr.getOp().kind() == Kind.MOD) {
-                    sb.append("%");
-                }
-                if (binaryExpr.getOp().kind() == Kind.EQ) {
-                    sb.append("==");
-                }
-                if (binaryExpr.getOp().kind() == Kind.AND) {
-                    sb.append("&&");
-                }
-                if (binaryExpr.getOp().kind() == Kind.OR) {
-                    sb.append("||");
-                }
-            }
-            //  if (binaryExpr.getOp().text()=="+")
-            // {
-            //.    sb.append("+");
-            // }
-            binaryExpr.getRightExpr().visit(this,arg);
-            sb.append(")");
-        }
-        return null;
-    }
-
-    @Override
-    public Object visitBlock(Block block, Object arg) throws PLCCompilerException {
-
-        //  StringBuilder sb = new StringBuilder();
-        String blockName;
-
-        List<Block.BlockElem> blockElems = block.getElems();
-        for (Block.BlockElem elem: blockElems) {
-            elem.visit(this, arg);
-        }
-
-        return null;
-    }
-
-    @Override
-    public Object visitBlockStatement(StatementBlock statementBlock, Object arg) throws PLCCompilerException {
-
-        statementBlock.getBlock().visit(this,arg);
-        return null;
-
-        //  throw new TypeCheckException("visitBlockStatement");
-    }
-
-    @Override
-    public Object visitChannelSelector(ChannelSelector channelSelector, Object arg) throws PLCCompilerException {
-//if (channelSelector.)
-        // if (channelSelector.)
-        // sb.append("PixelOps.setRed(")
-        if (channelSelector.color()==Kind.RES_green)
-        {
-            sb.append("PixelOps.setGreen(");
-
-        }
-        if  (channelSelector.color()==Kind.RES_red)
-        {
-            sb.append("PixelOps.setRed(");
-            return null;
-
-        }
-        if (channelSelector.color()==Kind.RES_blue)
-        {
-            sb.append("PixelOps.setBlue(");
-            return null;
-
-        }
-        return null;
-    }
-
-    @Override
-    public Object visitConditionalExpr(ConditionalExpr conditionalExpr, Object arg) throws PLCCompilerException {
-
-        sb.append("(");
-        sb.append("(");
-
-        conditionalExpr.getGuardExpr().visit(this,arg);
-        sb.append(")");
-
-        sb.append("?");
-        conditionalExpr.getTrueExpr().visit(this,arg);
-        sb.append(":");
-        conditionalExpr.getFalseExpr().visit(this,arg);
-        sb.append(")");
-        return null;
-    }
-
-    @Override
-    public Object visitDeclaration(Declaration declaration, Object arg) throws PLCCompilerException {
-       // ImageOps image = new ImageOps();
-
-        declaration.getNameDef().visit(this,arg);
-        if (declaration.getNameDef().getType()!=Type.IMAGE&&declaration.getInitializer()!=null)
-        {
-            sb.append("=");
-            declaration.getInitializer().visit(this,arg);
-            sb.append(";");
-            return null;
-
-        }
-        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() == null) {
-            sb.append("= ImageOps.cloneImage(");
-            declaration.getInitializer().visit(this, arg);
-            sb.append(");");
-            return null;
-        }
-
-        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() != null) {
-            sb.append("= ImageOps.copyAndResize(");
-            declaration.getInitializer().visit(this, arg);
-            sb.append(",");
-            declaration.getNameDef().getDimension().visit(this,arg);
-            sb.append(");");
-            return null;
-        }
-
-        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.INT && declaration.getNameDef().getDimension() == null) {
-            sb.append("= ImageOps.cloneImage((");
-            //if ( declaration.getInitializer().)
-            if (declaration.firstToken().kind()==Kind.RES_image)
-            {
-                sb.append("ImageOps.binaryImageImageOp(");
-               // inBinaryOP=true;
-               // String init = declaration.getInitializer().toString();
-            }
-
-            declaration.getInitializer().visit(this, arg);
-            sb.append(");;");
-            return null;
-        }
-
-        if (declaration.getNameDef().getType()==Type.IMAGE&&declaration.getInitializer()==null)
-        {
-
-            sb.append("= ImageOps.makeImage(");
-            declaration.getNameDef().getDimension().visit(this,arg);
-            sb.append(");");
-            return null;
-
-        }
-
-
-           if (declaration.getInitializer()!=null&&declaration.getInitializer().getType()==Type.STRING) {
-               sb.append("= FileURLIO.readImage(");
-               declaration.getInitializer().visit(this, arg);
-               sb.append(");");
-               return null;
-           }
-
-
-        if (declaration.getInitializer()==null)
-        {
-
-            sb.append(";");
-            return null;
-        }
-        if (declaration.getNameDef().getDimension()==null&&declaration.firstToken().kind()==Kind.RES_image&&declaration.getNameDef().getTypeToken().kind()==Kind.RES_image)
-        {
-            sb.append("= ImageOps.cloneImage((");
-            sb.append("ImageOps.binaryImageScalarOp(");
-            declaration.getInitializer().visit(this,arg);
-            sb.append(")));");
-            return null;
-
-
-        }
-        if (declaration.getNameDef().getDimension()!=null&&declaration.firstToken().kind()==Kind.RES_image&&declaration.getNameDef().getTypeToken().kind()==Kind.RES_image)
-        {
-            sb.append("=ImageOps.copyAndResize((");
-            sb.append("ImageOps.binaryImageScalarOp(");
-            declaration.getInitializer().visit(this,arg);
-            sb.append(")),");
-            declaration.getNameDef().getDimension().visit(this,arg);
-            sb.append(");");
-            return null;
-
-
-        }
-        else
-        {
-            sb.append("=");
-            declaration.getInitializer().visit(this,arg);
-            sb.append(";");
-        }
-
-        return null;
-    }
-
-    @Override
-    public Object visitDimension(Dimension dimension, Object arg) throws PLCCompilerException {
-        dimension.getWidth().visit(this,arg);
-        sb.append(",");
-
-        dimension.getHeight().visit(this,arg);
-
-        return null;
-        //throw new TypeCheckException("visitDimension");
-    }
-
-    @Override
-    public Object visitDoStatement(DoStatement doStatement, Object arg) throws PLCCompilerException {
-
-        if (doStatement.getGuardedBlocks() != null)
-        {
-            for (int i =0; i < doStatement.getGuardedBlocks().size(); i++) {
-
-                doStatement.getGuardedBlocks().get(i).visit(this,arg);
-        }
-        }
-            return null;
-
-        // throw new TypeCheckException("visitDoStatement");
-    }
-
-    @Override
-    public Object visitExpandedPixelExpr(ExpandedPixelExpr expandedPixelExpr, Object arg) throws PLCCompilerException {
-        sb.append("PixelOps.pack(");
-        expandedPixelExpr.getRed().visit(this,arg);
-        sb.append(",");
-        expandedPixelExpr.getGreen().visit(this,arg);
-
-        sb.append(",");
-        expandedPixelExpr.getBlue().visit(this,arg);
-        sb.append(")");
-
-
-        //   throw new TypeCheckException("visitExpandedPixelExpr");
-        return null;
-    }
-
-    @Override
-    public Object visitGuardedBlock(GuardedBlock guardedBlock, Object arg) throws PLCCompilerException {
-        if (guardedBlock.getGuard()!=null)
-        {
-            sb.append("if");
-            sb.append("(");
-
-            //  sb.append(guardedBlock.g],)
-            guardedBlock.getGuard().visit(this,arg);
-            sb.append(")");
-
-        }
-        if (guardedBlock.getBlock()!=null)
-        {
-            sb.append("{ ");
-            guardedBlock.getBlock().visit(this,arg);
-            sb.append("}");
-
-        }
-        return null;
-        //        throw new TypeCheckException("visitGuardedBlock");
-    }
-
-    @Override
-    public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCCompilerException {
-        if (identExpr.getName()!=null)
-        if (identExpr.getNameDef()==null)
-        {
-            sb.append(identExpr.getName());
-            return null;
-        }
-        {if (Objects.equals(identExpr.getNameDef().getName(), "false") || Objects.equals(identExpr.getNameDef().getName(), "isfalse")) {
-            sb.append("isfalse");
-            return null;
-
-        }
-            if (Objects.equals(identExpr.getNameDef().getName(), "true") || Objects.equals(identExpr.getNameDef().getName(), "istrue")) {
-                sb.append("istrue");
-                return null;
-
-            }
-            if (Objects.equals(identExpr.getNameDef().getName(), "INT")) {
-                sb.append("int ");
-                return null;
-            }
-            if (Objects.equals(identExpr.getNameDef().getName(), "string")) {
-                sb.append("String ");
-                return null;
-            }
-        }
-if (identExpr.getNameDef().getJavaName()!=null)
-            sb.append(identExpr.getNameDef().getJavaName());
-
-        return null;
-    }
-
-    @Override
-    public Object visitIfStatement(IfStatement ifStatement, Object arg) throws PLCCompilerException {
-
-        if (ifStatement.getGuardedBlocks()!=null)
-
-        {
-            for (int i =0; i < ifStatement.getGuardedBlocks().size(); i++) {
-
-                if (i!=ifStatement.getGuardedBlocks().size()&&i!=0)
-                {
-                    sb.append("else ");
-                }
-                ifStatement.getGuardedBlocks().get(i).visit(this, arg);
-            }
-        }
-        return null;
-    }
-
-    @Override
-    public Object visitLValue(LValue lValue, Object arg) throws PLCCompilerException {
-
-
-
-        if (lValue.firstToken.kind()==Kind.IDENT) {
-
-            sb.append(lValue.firstToken.text());
-            //   lValue.g
-        }
-
-
-        return null;
-    }
-    private int identifierCount = 1;
-    List<String> declaredVariables = new ArrayList<>();
-
-    @Override
-    public Object visitNameDef(NameDef nameDef, Object arg) throws PLCCompilerException {
-
-        if (nameDef.getType()==Type.IMAGE)
-        {
-            sb.append("BufferedImage");
-            String varName = nameDef.getJavaName();
-
-
-            sb.append(" ");
-
-            sb.append(varName);
-            return null;
-
-        }
-        if (nameDef.getType()==Type.STRING)
-        {
-            sb.append("String");
-
-        }if (nameDef.getType()==Type.PIXEL)
-        {
-            sb.append("int");
-
-        }
-        else{
-            sb.append(nameDef.getType().name().toLowerCase());}
-        String varName = nameDef.getJavaName();
-
-
-        sb.append(" ");
-
-        sb.append(varName);
-        return null;
-    }
-
-    @Override
-    public Object visitNumLitExpr(NumLitExpr numLitExpr, Object arg) throws PLCCompilerException {
-        sb.append(numLitExpr.firstToken.text());
-        return null;
-    }
-
-    @Override
-    public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws PLCCompilerException {
-
-        sb.append("[");
-        if ((pixelSelector.xExpr()!=null))
-        {
-            pixelSelector.xExpr().visit(this,arg);
-        }
-        sb.append(",");
-        if ((pixelSelector.yExpr()!=null))
-        {
-            pixelSelector.yExpr().visit(this,arg);
-        }
-        sb.append("]");
-
-
-        //  sb.append(pixelSelector.toString());
-        return null;
-        //     throw new TypeCheckException("visitPixelSelector");
-    }
-
-    @Override
-    public Object visitPostfixExpr(PostfixExpr postfixExpr, Object arg) throws PLCCompilerException {
-        if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_red)){
-
-            sb.append("PixelOps.red(");
-            sb.append(postfixExpr.primary().firstToken().text());
-            sb.append(")");
-            return null;
-        }
-        if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_green)){
-            sb.append("PixelOps.green(");
-            sb.append(postfixExpr.primary().firstToken().text());
-            sb.append(")");
-            return null;
-        }
-        if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_blue)){
-            sb.append("PixelOps.blue(");
-            sb.append(postfixExpr.primary().firstToken().text());
-            sb.append(")");
-            return null;
-        }
-        postfixExpr.primary().visit(this,arg);
-        postfixExpr.pixel().visit(this,arg);
-        return null;
-       // sb.append("")
-        //        throw new TypeCheckException("visitPostfixExpr");
-    }
-
-
-
-    @Override
-    public Object visitReturnStatement(ReturnStatement returnStatement, Object arg) throws PLCCompilerException {
-        sb.append("return ");
-
-        Expr e  = returnStatement.getE();
-        e.visit(this, arg);
-        sb.append(";");
-        return null;
-    }
-
-    @Override
-    public Object visitStringLitExpr(StringLitExpr stringLitExpr, Object arg) throws PLCCompilerException {
-        sb.append(stringLitExpr.getText());
-        toPrint = stringLitExpr.getText();
-        //  sb.append(";");
-        return stringLitExpr;
-        //        throw new TypeCheckException("visitStringLitExpr");
-    }
-
-    @Override
-    public Object visitUnaryExpr(UnaryExpr unaryExpr, Object arg) throws PLCCompilerException {
-
-        Kind opKind = unaryExpr.getOp();
-
-        sb.append("(");
-
-        if (Objects.equals(opKind.toString(), "RES_height"))
-        {
-            sb.append("(");
-            unaryExpr.getExpr().visit(this,arg);
-        sb.append(".getHeight()");
-        return null;
-        }
-        if (Objects.equals(opKind.toString(), "RES_width"))
-        {
-            sb.append("(");
-            unaryExpr.getExpr().visit(this,arg);
-        sb.append(".getWidth()");
-        return null;
-    }
-        if (Objects.equals(opKind.toString(), "SEMI"))
-
-            sb.append(";");
-        if (Objects.equals(opKind.toString(), "COMMA"))
-            sb.append(",");
-        if (Objects.equals(opKind.toString(), "QUESTION"))
-            sb.append("?");
-        if (Objects.equals(opKind.toString(), "RPAREN"))
-            sb.append(")");
-        if (Objects.equals(opKind.toString(), "LPAREN"))
-            sb.append("(");
-        if (Objects.equals(opKind.toString(), "LT"))
-            sb.append("<");
-        if (Objects.equals(opKind.toString(), "GT"))
-            sb.append(">");
-        if (Objects.equals(opKind.toString(), "LSQUARE"))
-            sb.append("[");
-        if (Objects.equals(opKind.toString(), "RSQUARE"))
-            sb.append("]");
-        if (Objects.equals(opKind.toString(), "ASSIGN"))
-            sb.append("=");
-        if (Objects.equals(opKind.toString(), "EQ"))
-            sb.append("==");
-        if (Objects.equals(opKind.toString(), "LE"))
-            sb.append("<=");
-        if (Objects.equals(opKind.toString(), "EQ"))
-            sb.append("==");
-        if (Objects.equals(opKind.toString(), "LE"))
-            sb.append("<=");
-        if (Objects.equals(opKind.toString(), "GE"))
-            sb.append(">=");
-        if (Objects.equals(opKind.toString(), "AND"))
-            sb.append("&&");
-        if (Objects.equals(opKind.toString(), "BITAND"))
-            sb.append("&");
-        if (Objects.equals(opKind.toString(), "BITOR"))
-            sb.append("|");
-        if (Objects.equals(opKind.toString(), "OR"))
-            sb.append("||");
-        if (Objects.equals(opKind.toString(), "EXP"))
-            sb.append("**");
-        if (Objects.equals(opKind.toString(), "BLOCK_OPEN"))
-            sb.append("<:");
-        if (Objects.equals(opKind.toString(), "BLOCK_CLOSE"))
-            sb.append(":>");
-        if (Objects.equals(opKind.toString(), "RETURN"))
-            sb.append("^");
-        if (Objects.equals(opKind.toString(), "RARROW"))
-            sb.append("->");
-        if (Objects.equals(opKind.toString(), "BOX"))
-            sb.append("[]");
-        if (Objects.equals(opKind.toString(), "MINUS")){
-            sb.append("-");}
-        if (Objects.equals(opKind.toString(), "BANG"))
-        {
-            sb.append("!");
-        }
-        if (Objects.equals(opKind.toString(), "PLUS"))
-        {
-            sb.append("+");
-        }
-        if (Objects.equals(opKind.toString(), "DIV"))
-        {
-            sb.append("/");
-        }
-        if (Objects.equals(opKind.toString(), "MOD"))
-        {
-            sb.append("%");
-        }
-        if (Objects.equals(opKind.toString(), "TIMES"))
-        {
-            sb.append("*");
-        }
-
-        Expr e = unaryExpr.getExpr();
-        e.visit(this, arg);
-        sb.append(")");
-        return null;
-    }
-
-    @Override
-    public Object visitWriteStatement(WriteStatement writeStatement, Object arg) throws PLCCompilerException {
-        // Object value = writeStatement.getExpr().visit(this, arg);
-        sb.append("ConsoleIO.write(");
-        Object value;
-        value= writeStatement.getExpr().visit(this, arg);
-        // Expr e = writeStatement.getExpr();
-        //      ConsoleIO.write("\"hello\"");
-
-
-        // Append the value to the Java code.
-        sb.append("); ");
-        // String s = ConsoleIO.write();
-        //   String tempString = temp.toString();
-        //    ConsoleIO.write(tempString);
-        return value;
-    }
-
-    @Override
-    public Object visitBooleanLitExpr(BooleanLitExpr booleanLitExpr, Object arg) throws PLCCompilerException {
-        if (Objects.equals(booleanLitExpr.getText(), "FALSE"))
-        {
-            sb.append("false");
-        }
-        else {
-            sb.append("true");
-        }
-        return null;
-    }
-
-    @Override
-    public Object visitConstExpr(ConstExpr constExpr, Object arg) throws PLCCompilerException {
-//throw new TypeCheckException("visitConstExpr");
-        String text = constExpr.firstToken.text();
-        String hex = null;
-
-        if (Objects.equals(constExpr.getName(), "Z"))
-        {
-            hex = "255";
-            //sb.append("255");
-        }
-        else {
-            if (Objects.equals(constExpr.firstToken.text(), "BLUE")) {
-                hex = "0x" + Integer.toHexString(Color.BLUE.getRGB());
-                //   sb.append(hex);
-
-            }
-            if (Objects.equals(constExpr.firstToken.text(), "CYAN")) {
-                hex = "0x" + Integer.toHexString(Color.CYAN.getRGB());
-                //   sb.append(hex);
-
-            }if (Objects.equals(constExpr.firstToken.text(), "cyan")) {
-                hex = "0x" + Integer.toHexString(Color.cyan.getRGB());
-                //   sb.append(hex);
-
-            }
-            if (Objects.equals(constExpr.firstToken.text(), "RED")) {
-                hex = "0x" + Integer.toHexString(Color.RED.getRGB());
-                // sb.append("RED");
-            }
-            if (Objects.equals(constExpr.firstToken.text(), "GREEN")) {
-                hex = "0x" + Integer.toHexString(Color.GREEN.getRGB());
-            }
-            if (Objects.equals(constExpr.firstToken.text(), "PINK")) {
-                hex = "0x" + Integer.toHexString(Color.PINK.getRGB());
-                //    sb.append(hex);
-            }
-            if (Objects.equals(constExpr.firstToken.text(), "MAGENTA")) {
-                hex = "0x" + Integer.toHexString(Color.MAGENTA.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "WHITE")) {
-                hex = "0x" + Integer.toHexString(Color.WHITE.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "white")) {
-                hex = "0x" + Integer.toHexString(Color.white.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "LIGHT GRAY")) {
-                hex = "0x" + Integer.toHexString(Color.LIGHT_GRAY.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "light gray")) {
-                hex = "0x" + Integer.toHexString(Color.lightGray.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "gray")) {
-                hex = "0x" + Integer.toHexString(Color.gray.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "GRAY")) {
-                hex = "0x" + Integer.toHexString(Color.GRAY.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "DARK_GRAY")) {
-                hex = "0x" + Integer.toHexString(Color.DARK_GRAY.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "dark grey")) {
-                hex = "0x" + Integer.toHexString(Color.darkGray.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "black")) {
-                hex = "0x" + Integer.toHexString(Color.black.getRGB());
-                //    sb.append(hex);
-            }if (Objects.equals(constExpr.firstToken.text(), "BLACK")) {
-                hex = "0x" + Integer.toHexString(Color.BLACK.getRGB());
-                //    sb.append(hex);
-            }
-        }
-        sb.append(hex);
-
-        return null;
-    }
+		IToken identName;
+		if (isKind(RES_image, RES_pixel, RES_int, RES_string, RES_void, RES_boolean)) {
+			type = type();
+		}
+
+		if (isKind(Kind.IDENT)) {
+
+			identName = t;
+
+			consume();
+
+		} else {
+
+			throw new SyntaxException(t.sourceLocation() + "Ident missing");
+
+		}
+
+		matches(Kind.LPAREN);
+
+		List < NameDef > paramList = paramList();
+
+		matches(Kind.RPAREN);
+
+		Block block = block();
+
+		if (t.kind() != Kind.EOF) {
+
+			throw new SyntaxException(t.sourceLocation() + "Block parse at end, but not EOF token: " + t.kind());
+
+		}
+		return new Program(t, type, identName, paramList, block);
+
+	}
+	private Block block() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		List < Block.BlockElem > blockElements = new ArrayList < > ();
+
+		match(BLOCK_OPEN);
+		while (!isKind(BLOCK_CLOSE)) {
+
+			if (isKind(RES_image, RES_pixel, RES_int, RES_string, RES_void, RES_boolean)) {
+				blockElements.add(declaration());
+
+			} else if (isKind(IDENT, RES_write, RES_do, RES_if, RETURN, BLOCK_OPEN)) {
+				blockElements.add(statement());
+
+			}
+
+			match(Kind.SEMI);
+
+		}
+
+		match(Kind.BLOCK_CLOSE);
+
+		return new Block(firstToken, blockElements);
+
+	}
+
+
+	private List < NameDef > paramList() throws SyntaxException, LexicalException {
+		List < NameDef > paramsList = new ArrayList < > ();
+
+		if (isKind(RES_image, RES_pixel, RES_int, RES_string, RES_void, RES_boolean)) {
+
+			paramsList.add(nameDef());
+
+			while (matches(Kind.COMMA)) {
+
+				paramsList.add(nameDef());
+
+			}
+
+		}
+
+		return paramsList;
+
+	}
+	private NameDef nameDef() throws LexicalException, SyntaxException {
+
+		IToken firstToken = t;
+		IToken type;
+		type = type();
+		Dimension dimension=null;
+
+		if (isKind(Kind.LSQUARE)) {
+
+			dimension = dimension();
+
+		}
+
+		IToken identName = t;
+
+		match(IDENT);
+
+		return new NameDef(firstToken, type, dimension, identName);
+
+	}
+	private IToken type() throws SyntaxException, LexicalException {
+
+		IToken type;
+
+		if (isKind(RES_image, RES_pixel, RES_int, RES_string, RES_void, RES_boolean)) {
+
+			type = t;
+
+			consume();
+
+			return type;
+
+		}
+
+		throw new SyntaxException(t.sourceLocation(), "Type missing");
+
+	}
+
+	private Declaration declaration() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+		if (isKind(RES_image, RES_pixel, RES_int, RES_string, RES_void, RES_boolean)) {
+			NameDef nameDef = nameDef();
+
+			Expr initializer = null;
+
+			if (matches(Kind.ASSIGN)) {
+
+				initializer = expr();
+
+			}
+
+
+			return new Declaration(firstToken, nameDef, initializer);
+
+		} else
+			throw new SyntaxException("Decleration error" + t.text());
+	}
+
+	private boolean isExprStart() throws LexicalException {
+		return isKind(Kind.QUESTION) || isKind(Kind.BANG) || isKind(Kind.MINUS) || isKind(Kind.RES_width) || isKind(Kind.RES_height) || isKind(Kind.STRING_LIT) || isKind(Kind.NUM_LIT) || isKind(Kind.BOOLEAN_LIT) || isKind(Kind.IDENT) || isKind(Kind.LPAREN) || isKind(Kind.CONST) || isKind(Kind.LSQUARE);
+	}
+
+	private Expr expr() throws SyntaxException, LexicalException {
+		if (isExprStart()) {
+			return logicalOrExpr();
+		} else if (isKind(Kind.QUESTION))
+			return conditionalExpr();
+
+		else {
+			throw new SyntaxException(t.sourceLocation() + "not Expr");
+		}
+	}
+
+	private Expr conditionalExpr() throws LexicalException, SyntaxException {
+		IToken firstToken = t;
+
+		match(QUESTION);
+		Expr guard = expr();
+		if (t.kind()==RPAREN)
+		{
+			consume();
+		}
+		match(RARROW);
+		Expr trueExpr = expr();
+		match(COMMA);
+		Expr falseExpr = expr();
+		return new ConditionalExpr(firstToken, guard, trueExpr, falseExpr);
+	}
+
+	private Expr logicalOrExpr() throws LexicalException, SyntaxException {
+		IToken firstToken = t;
+		Expr logicalOrExpr = logicalAndExpr();
+		Expr right;
+		IToken operator;
+
+		while (isKind(Kind.OR) || isKind(Kind.BITOR)) {
+			operator = t;
+			consume();
+			right = logicalAndExpr();
+			logicalOrExpr = new BinaryExpr(firstToken, logicalOrExpr, operator, right);
+
+		}
+
+		return logicalOrExpr;
+
+	}
+
+	private Expr logicalAndExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		Expr logicalAndExpr = comparisonExpr();
+
+		Expr rightExpr;
+
+		IToken op;
+
+		while (isKind(Kind.AND, Kind.BITAND)) {
+
+			op = t;
+
+			consume();
+
+			rightExpr = logicalAndExpr();
+
+			logicalAndExpr = new BinaryExpr(firstToken, logicalAndExpr, op, rightExpr);
+
+		}
+
+		return logicalAndExpr;
+
+	}
+
+	private Expr comparisonExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		Expr rightExpr;
+
+		IToken op;
+		Expr comparisonExpr = powExpr();
+
+		while (isKind(LT) || isKind(GT) || isKind(EQ) || isKind(LE) || isKind(GE)) {
+
+			op = t;
+
+			consume();
+
+			rightExpr = powExpr();
+
+			comparisonExpr = new BinaryExpr(firstToken, comparisonExpr, op, rightExpr);
+
+		}
+
+		return comparisonExpr;
+
+	}
+
+	private Expr powExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+		Expr rightExpr;
+		Expr leftExpr;
+		IToken op;
+
+		leftExpr = additiveExpr();
+
+		while (isKind(Kind.EXP)) {
+
+			op = t;
+
+			consume();
+
+			rightExpr = powExpr();
+
+			leftExpr = new BinaryExpr(firstToken, leftExpr, op, rightExpr);
+
+		}
+
+		return leftExpr;
+
+	}
+
+	private Expr additiveExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+		Expr rightExpr;
+		IToken op;
+		Expr leftExpr = multiplicativeExpr();
+
+		while (isKind(Kind.PLUS) || isKind(Kind.MINUS)) {
+
+			op = t;
+
+			consume();
+
+			rightExpr = multiplicativeExpr();
+			if (t.kind()==RPAREN){
+			consume();}
+
+			leftExpr = new BinaryExpr(firstToken, leftExpr, op, rightExpr);
+
+		}
+
+		return leftExpr;
+
+	}
+
+	private Expr multiplicativeExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		Expr leftExpr = unaryExpr();
+
+		Expr rightExpr;
+
+		IToken op;
+
+		while (isKind(Kind.TIMES) || isKind(Kind.DIV) || isKind(Kind.MOD)) { //should be
+
+			op = t;
+			consume();
+
+			rightExpr = unaryExpr();
+
+			leftExpr = new BinaryExpr(firstToken, leftExpr, op, rightExpr);
+
+		}
+		//consume();
+
+		return leftExpr;
+
+	}
+
+	private Expr unaryExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		Expr e;
+
+		if (matches(Kind.BANG) || matches(Kind.MINUS) || matches(Kind.RES_width) || matches(Kind.RES_height)) {
+
+			e = expr();
+
+			return new UnaryExpr(firstToken, firstToken, e);
+
+		} else
+
+			return postfixExpr();
+
+	}
+
+	private Expr postfixExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+		PixelSelector pixel = null;
+		ChannelSelector channel = null;
+		Expr primaryExpr = primaryExpr();
+
+		if (isKind(Kind.LSQUARE)) {
+
+			pixel = pixelSelector();
+
+			if (isKind(Kind.COLON)) {
+
+				channel = channelSelector();
+			}
+			return new PostfixExpr(firstToken, primaryExpr, pixel, channel);
+
+		} else if (isKind(COLON)) {
+			channel = channelSelector();
+
+			return new PostfixExpr(firstToken, primaryExpr, pixel, channel);
+
+		} else {
+			return primaryExpr;
+		}
+
+	}
+
+	private Expr primaryExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		Expr expr;
+
+		if (matches(Kind.STRING_LIT)) {
+
+			expr = new StringLitExpr(firstToken);
+
+		} else if (matches(Kind.NUM_LIT)) {
+
+			expr = new NumLitExpr(firstToken);
+
+		} else if (matches(Kind.BOOLEAN_LIT)) {
+
+			expr = new BooleanLitExpr(firstToken);
+
+		} else if (matches(Kind.IDENT)) {
+
+			expr = new IdentExpr(firstToken);
+
+		} else if (matches(Kind.CONST)) {
+
+			expr = new ConstExpr(firstToken);
+
+		} else if (isKind(Kind.LSQUARE)) {
+
+			expr = expandedPixelExpr();
+
+		} else if (matches(Kind.LPAREN)) {
+
+			expr = expr();
+
+		}
+		else if (firstToken.kind() == QUESTION)
+		{
+			expr = conditionalExpr();
+		}
+
+		else {
+
+			throw new SyntaxException(t.sourceLocation() + t.text() +t.kind()+ "Not right Token");
+
+		}
+
+		return expr;
+
+	}
+
+	private ChannelSelector channelSelector() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		match(COLON);
+
+		IToken color;
+
+		if (matches(Kind.RES_red, Kind.RES_green, Kind.RES_blue)) {
+
+			if (isKind(RES_blue)) {
+				consume();
+			}
+			if (isKind(RES_green)) {
+				consume();
+			}
+			if (isKind(RES_red)) {
+				consume();
+			}
+			color = prev();
+		} else
+
+			throw new SyntaxException(t.sourceLocation(), "color token err");
+
+		return new ChannelSelector(firstToken, color);
+
+	}
+
+	private PixelSelector pixelSelector() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		consume();
+
+		Expr xExpr = expr();
+
+		match(COMMA);
+
+		Expr yExpr = expr();
+
+		match(RSQUARE);
+
+		return new PixelSelector(firstToken, xExpr, yExpr);
+
+	}
+
+	private Expr expandedPixelExpr() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		consume();
+
+		Expr red = expr();
+
+		match(COMMA);
+
+		Expr grn = expr();
+
+		match(COMMA);
+
+		Expr blu = expr();
+
+		match(RSQUARE);
+
+		return new ExpandedPixelExpr(firstToken, red, grn, blu);
+
+	}
+	public IToken prev() throws LexicalException {
+		IToken prev;
+		try {
+			prev = tokens.get(counter - 1);
+		} catch (ArrayIndexOutOfBoundsException e) {
+			throw new LexicalException(t.sourceLocation(), "invalid index for t:" + t.toString());
+		}
+		// Return the previous token.
+		return prev;
+	}
+
+
+
+
+
+
+	private Dimension dimension() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		match(Kind.LSQUARE);
+
+		Expr width;
+		width = expr();
+
+		match(Kind.COMMA);
+
+		Expr height;
+		height = expr();
+
+		match(Kind.RSQUARE);
+
+		return new Dimension(firstToken, width, height);
+
+	}
+
+	private Statement statement() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+		LValue lvalue;
+
+		if (isKind(Kind.IDENT)) { //no consume consume in lval
+			lvalue = lvalue();
+
+			match(Kind.ASSIGN);
+
+			Expr expr = expr();
+
+			return new AssignmentStatement(firstToken, lvalue, expr);
+
+		} else if (matches(Kind.RES_write)) { //write Expr
+
+			Expr expr;
+			expr = expr();
+
+			return new WriteStatement(firstToken, expr);
+
+		} else if (matches(Kind.RES_do)) {
+
+			List < GuardedBlock > guardedBlockList = new ArrayList < > ();
+			matches(RES_do);
+			GuardedBlock guardB = guardedBlock();
+			guardedBlockList.add(guardB);
+
+			while (matches(Kind.BOX)) {
+
+				GuardedBlock gB = guardedBlock();
+
+				guardedBlockList.add(gB);
+
+			}
+
+			match(Kind.RES_od);
+
+			return new DoStatement(firstToken, guardedBlockList);
+
+		} else if (matches(Kind.RES_if)) {
+			List < GuardedBlock > guardBlockList = new ArrayList < > ();
+
+			GuardedBlock guardBlock = guardedBlock();
+
+			guardBlockList.add(guardBlock);
+
+			while (matches(Kind.BOX)) {
+
+				GuardedBlock guardedBlock = guardedBlock();
+
+				guardBlockList.add(guardedBlock);
+
+			}
+
+			match(Kind.RES_fi);
+			return new IfStatement(firstToken, guardBlockList);
+		} else if (matches(Kind.RETURN)) {
+			Expr expr = expr();
+			return new ReturnStatement(firstToken, expr);
+		} else if (isKind(Kind.BLOCK_OPEN)) {
+			Block block = block();
+			return new StatementBlock(firstToken, block);
+
+		}
+		throw new SyntaxException(t.sourceLocation(), "Statement issue");
+
+	}
+
+	private LValue lvalue() throws LexicalException, SyntaxException {
+
+		IToken firstToken = t;
+		IToken name = firstToken;
+		match(IDENT);
+		PixelSelector pixelSelector = null;
+
+		ChannelSelector channelSelector = null;
+
+		if (isKind(Kind.LSQUARE))
+
+			pixelSelector = pixelSelector();
+
+		if (isKind(Kind.COLON))
+
+			channelSelector = channelSelector();
+
+		return new LValue(firstToken, name, pixelSelector, channelSelector);
+
+	}
+
+	private GuardedBlock guardedBlock() throws SyntaxException, LexicalException {
+
+		IToken firstToken = t;
+
+		Expr guard;
+
+		guard = expr();
+
+		match(Kind.RARROW);
+
+		Block block;
+		block = block();
+
+		return new GuardedBlock(firstToken, guard, block);
+
+	}
+	public boolean matches(Kind...kind) throws LexicalException { //mult parameter and consumes
+		if (kind.length == 0) {
+			return false;
+		}
+		if (isKind(kind)) {
+			consume();
+			return true;
+		}
+		return false;
+	}
+	public boolean match(Kind kind) throws SyntaxException, LexicalException { //single parameter doesn't consume
+
+		if (!matches(kind)) {
+
+			throw new SyntaxException("not right kind for AST"+"expected type "+kind+"actual"+t.kind());
+
+		}
+
+		return true;
+
+	}
+
+	public boolean matches(Kind kind) throws LexicalException { //single parameter and consumes
+
+		if (isKind(kind)) {
+			consume();
+			return true;
+		}
+		return false;
+	}
+
+	public boolean isKind(Kind...kinds) throws LexicalException { //mult param doesn't consume
+
+		if (kinds.length == 0) {
+			return false;
+		}
+		if (t.kind() != EOF) {
+			return Arrays.stream(kinds).anyMatch(kind -> t.kind() == kind);
+		}
+
+		if (t.kind() == EOF) { // if EOF, throw a LexicalException.
+			throw new LexicalException(t.sourceLocation() + "EOF");
+		}
+		return false;
+	}
+	public boolean isKind(Kind kinds) throws LexicalException { //single parameter doesn't consume
+
+		if (t.kind() == kinds) {
+			return true;
+		}
+
+		if (t.kind() == Kind.EOF) {
+			throw new LexicalException(t.sourceLocation() + "EOF");
+		}
+		return false;
+	}
+
+	public IToken consume() {
+		if (t.kind() == Kind.EOF) {
+			return t;
+		} else
+			t = tokens.get(++counter);
+		return t;
+	}
+
 }
