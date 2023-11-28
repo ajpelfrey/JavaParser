@@ -1,21 +1,26 @@
 package edu.ufl.cise.cop4020fa23;
 import edu.ufl.cise.cop4020fa23.ast.*;
+import edu.ufl.cise.cop4020fa23.ast.Dimension;
 import edu.ufl.cise.cop4020fa23.exceptions.PLCCompilerException;
 import edu.ufl.cise.cop4020fa23.exceptions.TypeCheckException;
 import edu.ufl.cise.cop4020fa23.runtime.ConsoleIO;
+import edu.ufl.cise.cop4020fa23.runtime.ImageOps;
 import edu.ufl.cise.cop4020fa23.runtime.PixelOps;
-import java.awt.Color;
+
+import java.awt.*;
 
 
-
+import java.awt.image.BufferedImage;
 import java.util.*;
 import java.lang.*;
+import java.util.List;
 
 public class CodeGeneratorVisitor implements ASTVisitor {
 
     private Map<String, Integer> declaredVariableCounts = new HashMap<>();
     private String writeString;
     String toPrint=null;
+    Boolean inBinaryOP = false;
 
     private int counter = 1;
     //  private int n = counter;
@@ -156,8 +161,43 @@ public class CodeGeneratorVisitor implements ASTVisitor {
     }
     @Override
     public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws PLCCompilerException {
+       // Expr height =  assignmentStatement.getlValue().getNameDef().getDimension().getHeight();
+
+        if (assignmentStatement.getlValue().getType()==Type.IMAGE&&assignmentStatement.getE().getType()==Type.PIXEL)
+        {
+
+                sb.append("for (int x=0; x < ");
+                sb.append(assignmentStatement.getlValue().getName());
+                sb.append(".getWidth(); x++) {");
+                sb.append("for (int y=0; y < ");
+                sb.append(assignmentStatement.getlValue().getName());
+                sb.append(".getHeight(); y++) {");
+
+
+                sb.append("ImageOps.setRGB(");
+                assignmentStatement.getlValue().visit(this,arg);
+             //   sb.append(assignmentStatement.getlValue().getName());
+                sb.append(",");
+                sb.append("x");
+                sb.append(",");
+                sb.append("y");
+                sb.append(",");
+                sb.append("(");
+
+                assignmentStatement.getE().visit(this, arg);
+                sb.append(")");
+                sb.append(")");
+
+                sb.append(";");
+                sb.append("}}");
+
+                return null;
+            }
+
 
         assignmentStatement.getlValue().visit(this,arg);
+
+
         if (assignmentStatement.getlValue().getType() ==Type.PIXEL&&assignmentStatement.getlValue().getChannelSelector()!=null)
         {
             sb.append(" = ");
@@ -185,17 +225,7 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             sb.append(");");
             return null;
         }
-      /*  if (( assignmentStatement.getlValue().getType()==Type.PIXEL)&&(assignmentStatement.getlValue().getChannelSelector()!=null))
-        {
-            sb.append("PixelOps.setGreen(");
-            assignmentStatement.getlValue().visit(this,arg);
-            sb.append(",");
-            assignmentStatement.getE().visit(this,arg);
-            sb.append(")");
-        }*/
-        //  else
 
-        //        assignmentStatement.getlValue().visit(this,arg);
         sb.append("=");
         assignmentStatement.getE().visit(this,arg); //should be expanded pixel for num 6
         sb.append(";");
@@ -205,20 +235,17 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws PLCCompilerException {
+if (inBinaryOP==false){
+        if (binaryExpr.getOp().kind()==Kind.PLUS) {
 
-        if (binaryExpr.getOp().kind()==Kind.PLUS)
-        {
-
-            if (binaryExpr.getLeftExpr().getType()==Type.PIXEL&&binaryExpr.getRightExpr().getType()==Type.PIXEL)
-            {
+            if (binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.PIXEL) {
                 sb.append("(");
                 sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
-                binaryExpr.getLeftExpr().visit(this,arg);
+                binaryExpr.getLeftExpr().visit(this, arg);
 
                 ///   sb.append(binaryExpr.getLeftExpr().toString());
                 sb.append(",");
-                binaryExpr.getRightExpr().visit(this,arg);
-
+                binaryExpr.getRightExpr().visit(this, arg);
 
 
                 sb.append(")");
@@ -227,6 +254,8 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                 return null;
 
             }
+        }
+
         }
 
 
@@ -264,6 +293,17 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                 sb.append(">");
                 binaryExpr.getRightExpr().visit(this,arg);
                 return null;
+            }
+            if (binaryExpr.getOp().kind()==Kind.PLUS&&binaryExpr.getLeftExpr().getType()==Type.IMAGE&&binaryExpr.getRightExpr().getType()==Type.IMAGE)
+            {
+                sb.append("ImageOps.OP.PLUS,");
+                        sb.append(binaryExpr.getLeftExpr().firstToken.text());
+                        sb.append(",");
+                sb.append(binaryExpr.getRightExpr().firstToken.text());
+                sb.append("))");
+                return null;
+
+
             }
 
             else {
@@ -399,8 +439,13 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitConditionalExpr(ConditionalExpr conditionalExpr, Object arg) throws PLCCompilerException {
+
         sb.append("(");
+        sb.append("(");
+
         conditionalExpr.getGuardExpr().visit(this,arg);
+        sb.append(")");
+
         sb.append("?");
         conditionalExpr.getTrueExpr().visit(this,arg);
         sb.append(":");
@@ -411,13 +456,35 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitDeclaration(Declaration declaration, Object arg) throws PLCCompilerException {
+       // ImageOps image = new ImageOps();
 
         declaration.getNameDef().visit(this,arg);
+        if (declaration.getNameDef().getType()!=Type.IMAGE&&declaration.getInitializer()!=null)
+        {
+            sb.append("=");
+            declaration.getInitializer().visit(this,arg);
+            sb.append(";");
+            return null;
 
+        }
         if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() == null) {
             sb.append("= ImageOps.cloneImage(");
             declaration.getInitializer().visit(this, arg);
             sb.append(");");
+            return null;
+        }
+        if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.INT && declaration.getNameDef().getDimension() == null) {
+            sb.append("= ImageOps.cloneImage((");
+            //if ( declaration.getInitializer().)
+            if (declaration.firstToken().kind()==Kind.RES_image)
+            {
+                sb.append("ImageOps.binaryImageImageOp(");
+                inBinaryOP=true;
+               // String init = declaration.getInitializer().toString();
+            }
+
+            declaration.getInitializer().visit(this, arg);
+            sb.append(");;");
             return null;
         }
         if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.IMAGE && declaration.getNameDef().getDimension() != null) {
@@ -428,18 +495,28 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             sb.append(");");
             return null;
         }
-
-        else if (declaration.getNameDef().getType()==Type.IMAGE)
+        if (declaration.getNameDef().getType()==Type.IMAGE&&declaration.getInitializer()==null)
         {
-            sb.append("= FileURLIO.readImage(");
-            declaration.getInitializer().visit(this,arg);
+
+            sb.append("= ImageOps.makeImage(");
+            declaration.getNameDef().getDimension().visit(this,arg);
             sb.append(");");
             return null;
 
         }
 
+
+           if (declaration.getInitializer()!=null&&declaration.getInitializer().getType()==Type.STRING) {
+               sb.append("= FileURLIO.readImage(");
+               declaration.getInitializer().visit(this, arg);
+               sb.append(");");
+               return null;
+           }
+
+
         if (declaration.getInitializer()==null)
         {
+
             sb.append(";");
             return null;
         }
@@ -466,7 +543,17 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitDoStatement(DoStatement doStatement, Object arg) throws PLCCompilerException {
-        throw new TypeCheckException("visitDoStatement");
+
+        if (doStatement.getGuardedBlocks() != null)
+        {
+            for (int i =0; i < doStatement.getGuardedBlocks().size(); i++) {
+
+                doStatement.getGuardedBlocks().get(i).visit(this,arg);
+        }
+        }
+            return null;
+
+        // throw new TypeCheckException("visitDoStatement");
     }
 
     @Override
@@ -620,7 +707,20 @@ public class CodeGeneratorVisitor implements ASTVisitor {
     @Override
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws PLCCompilerException {
 
-        sb.append(pixelSelector.toString());
+        sb.append("[");
+        if ((pixelSelector.xExpr()!=null))
+        {
+            pixelSelector.xExpr().visit(this,arg);
+        }
+        sb.append(",");
+        if ((pixelSelector.yExpr()!=null))
+        {
+            pixelSelector.yExpr().visit(this,arg);
+        }
+        sb.append("]");
+
+
+        //  sb.append(pixelSelector.toString());
         return null;
         //     throw new TypeCheckException("visitPixelSelector");
     }
@@ -632,18 +732,24 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             sb.append("PixelOps.red(");
             sb.append(postfixExpr.primary().firstToken().text());
             sb.append(")");
+            return null;
         }
         if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_green)){
             sb.append("PixelOps.green(");
             sb.append(postfixExpr.primary().firstToken().text());
             sb.append(")");
+            return null;
         }
         if (postfixExpr.primary().getType() ==Type.PIXEL&&(postfixExpr.channel().color()==Kind.RES_blue)){
             sb.append("PixelOps.blue(");
             sb.append(postfixExpr.primary().firstToken().text());
             sb.append(")");
+            return null;
         }
+        postfixExpr.primary().visit(this,arg);
+        postfixExpr.pixel().visit(this,arg);
         return null;
+       // sb.append("")
         //        throw new TypeCheckException("visitPostfixExpr");
     }
 
@@ -675,7 +781,20 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
         sb.append("(");
 
-
+        if (Objects.equals(opKind.toString(), "RES_height"))
+        {
+            sb.append("(");
+            unaryExpr.getExpr().visit(this,arg);
+        sb.append(".getHeight()");
+        return null;
+        }
+        if (Objects.equals(opKind.toString(), "RES_width"))
+        {
+            sb.append("(");
+            unaryExpr.getExpr().visit(this,arg);
+        sb.append(".getWidth()");
+        return null;
+    }
         if (Objects.equals(opKind.toString(), "SEMI"))
 
             sb.append(";");
@@ -803,6 +922,15 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                 //   sb.append(hex);
 
             }
+            if (Objects.equals(constExpr.firstToken.text(), "CYAN")) {
+                hex = "0x" + Integer.toHexString(Color.CYAN.getRGB());
+                //   sb.append(hex);
+
+            }if (Objects.equals(constExpr.firstToken.text(), "cyan")) {
+                hex = "0x" + Integer.toHexString(Color.cyan.getRGB());
+                //   sb.append(hex);
+
+            }
             if (Objects.equals(constExpr.firstToken.text(), "RED")) {
                 hex = "0x" + Integer.toHexString(Color.RED.getRGB());
                 // sb.append("RED");
@@ -816,6 +944,36 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             }
             if (Objects.equals(constExpr.firstToken.text(), "MAGENTA")) {
                 hex = "0x" + Integer.toHexString(Color.MAGENTA.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "WHITE")) {
+                hex = "0x" + Integer.toHexString(Color.WHITE.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "white")) {
+                hex = "0x" + Integer.toHexString(Color.white.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "LIGHT GRAY")) {
+                hex = "0x" + Integer.toHexString(Color.LIGHT_GRAY.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "light gray")) {
+                hex = "0x" + Integer.toHexString(Color.lightGray.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "gray")) {
+                hex = "0x" + Integer.toHexString(Color.gray.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "GRAY")) {
+                hex = "0x" + Integer.toHexString(Color.GRAY.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "DARK_GRAY")) {
+                hex = "0x" + Integer.toHexString(Color.DARK_GRAY.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "dark grey")) {
+                hex = "0x" + Integer.toHexString(Color.darkGray.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "black")) {
+                hex = "0x" + Integer.toHexString(Color.black.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "BLACK")) {
+                hex = "0x" + Integer.toHexString(Color.BLACK.getRGB());
                 //    sb.append(hex);
             }
         }
