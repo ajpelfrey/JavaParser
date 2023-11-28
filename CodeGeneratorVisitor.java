@@ -1,6 +1,7 @@
 package edu.ufl.cise.cop4020fa23;
 import edu.ufl.cise.cop4020fa23.ast.*;
 import edu.ufl.cise.cop4020fa23.ast.Dimension;
+import edu.ufl.cise.cop4020fa23.exceptions.CodeGenException;
 import edu.ufl.cise.cop4020fa23.exceptions.PLCCompilerException;
 import edu.ufl.cise.cop4020fa23.exceptions.TypeCheckException;
 import edu.ufl.cise.cop4020fa23.runtime.ConsoleIO;
@@ -71,6 +72,7 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         {
             type ="BufferedImage";
         }
+
 
         sb.append("public static ").append(type).append(" apply(");
 
@@ -527,6 +529,11 @@ if (inBinaryOP==false){
         if (declaration.getNameDef().getType()==Type.IMAGE&&declaration.getInitializer()==null)
         {
 
+            if (declaration.getNameDef().getDimension()==null)
+            {
+                throw new CodeGenException("SHOULD HAVE DIMMENSION");
+            }
+
             sb.append("= ImageOps.makeImage(");
             declaration.getNameDef().getDimension().visit(this,arg);
             sb.append(");");
@@ -535,7 +542,8 @@ if (inBinaryOP==false){
         }
 
 
-           if (declaration.getInitializer()!=null&&declaration.getInitializer().getType()==Type.STRING) {
+           if (declaration.getInitializer()!=null&&declaration.getInitializer().getType()==Type.STRING)
+           {
                sb.append("= FileURLIO.readImage(");
                declaration.getInitializer().visit(this, arg);
                sb.append(");");
@@ -683,7 +691,6 @@ if (inBinaryOP==false){
             return null;}if (Objects.equals(identExpr.getNameDef().getName(),"im")){
             sb.append("im");
             return null;}
-
 
     sb.append(identExpr.getNameDef().getName());
         return null;
