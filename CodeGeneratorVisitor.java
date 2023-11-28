@@ -236,11 +236,21 @@ public class CodeGeneratorVisitor implements ASTVisitor {
     @Override
     public Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws PLCCompilerException {
 if (inBinaryOP==false){
+
+
+
+
+
         if (binaryExpr.getOp().kind()==Kind.PLUS) {
+
+
 
             if (binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.PIXEL) {
                 sb.append("(");
-                sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
+                if (binaryExpr.getOp().kind()==Kind.PLUS) {
+                    sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
+                }
+
                 binaryExpr.getLeftExpr().visit(this, arg);
 
                 ///   sb.append(binaryExpr.getLeftExpr().toString());
@@ -304,6 +314,14 @@ if (inBinaryOP==false){
                 return null;
 
 
+            }
+            if (binaryExpr.getOp().kind()==Kind.DIV&&binaryExpr.getLeftExpr().getType()==Type.IMAGE&&binaryExpr.getRightExpr().getType()== Type.INT) {
+                sb.append("ImageOps.OP.DIV,");
+                sb.append(binaryExpr.getLeftExpr().firstToken.text());
+                sb.append(",");
+                sb.append(binaryExpr.getRightExpr().firstToken.text());
+
+                return null;
             }
 
             else {
@@ -479,7 +497,7 @@ if (inBinaryOP==false){
             if (declaration.firstToken().kind()==Kind.RES_image)
             {
                 sb.append("ImageOps.binaryImageImageOp(");
-                inBinaryOP=true;
+               // inBinaryOP=true;
                // String init = declaration.getInitializer().toString();
             }
 
@@ -519,6 +537,16 @@ if (inBinaryOP==false){
 
             sb.append(";");
             return null;
+        }
+        if (declaration.firstToken().kind()==Kind.RES_image&&declaration.getNameDef().getTypeToken().kind()==Kind.RES_image)
+        {
+            sb.append("= ImageOps.cloneImage((");
+            sb.append("ImageOps.binaryImageScalarOp(");
+            declaration.getInitializer().visit(this,arg);
+            sb.append(")));");
+            return null;
+
+
         }
         else
         {
@@ -622,7 +650,7 @@ if (inBinaryOP==false){
                 return null;
             }
         }
-
+if (identExpr.getNameDef().getJavaName()!=null)
             sb.append(identExpr.getNameDef().getJavaName());
 
         return null;
