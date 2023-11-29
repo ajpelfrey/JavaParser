@@ -95,6 +95,10 @@ public class Parser implements IParser {
 				blockElements.add(statement());
 
 			}
+			if (t.kind()==RPAREN)
+			{
+				consume();
+			}
 
 			match(Kind.SEMI);
 
@@ -319,9 +323,7 @@ public class Parser implements IParser {
 		while (isKind(Kind.PLUS) || isKind(Kind.MINUS)) {
 
 			op = t;
-
 			consume();
-
 			rightExpr = multiplicativeExpr();
 			if (t.kind()==RPAREN){
 			consume();}
