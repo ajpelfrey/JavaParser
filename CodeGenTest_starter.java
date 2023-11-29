@@ -607,7 +607,9 @@ if (inBinaryOP==false){
         {
             for (int i =0; i < doStatement.getGuardedBlocks().size(); i++) {
 
+
                 doStatement.getGuardedBlocks().get(i).visit(this,arg);
+
         }
         }
             return null;
@@ -814,7 +816,21 @@ if (inBinaryOP==false){
             sb.append(")");
             return null;
         }
+if (postfixExpr.primary()!=null&&postfixExpr.channel()==null&&postfixExpr.primary().firstToken.kind()==Kind.IDENT)
+{
+    sb.append("ImageOps.getRGB(");
+    sb.append(postfixExpr.primary().firstToken().text());
+    sb.append(",");
+
+    sb.append(postfixExpr.pixel().xExpr().firstToken().text());
+    sb.append(",");
+    sb.append(postfixExpr.pixel().yExpr().firstToken().text());
+    sb.append(")");
+    return null;
+
+}
         if (postfixExpr.primary() != null) {
+
             postfixExpr.primary().visit(this,arg);
 
         }
