@@ -768,6 +768,51 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             return null;
 
         }
+        if (postfixExpr.primary()!=null &&postfixExpr.channel()!=null && postfixExpr.pixel()!=null)
+        {
+            if (postfixExpr.channel().color()==Kind.RES_red) {
+
+               sb.append("(ImageOps.getRGB(");
+                postfixExpr.primary().visit(this,arg);
+                sb.append(",");
+
+                sb.append(postfixExpr.pixel().xExpr().firstToken.text());
+sb.append(",");
+                sb.append(postfixExpr.pixel().yExpr().firstToken.text());
+                //postfixExpr.pixel().visit(this,arg);
+
+                // sb.append(postfixExpr.primary().firstToken.text());
+               sb.append("))");
+
+            }
+        return null;
+        }
+        if (postfixExpr.channel()!=null&&postfixExpr.pixel()==null)
+        {
+            if (postfixExpr.channel().color()==Kind.RES_red)
+            {
+                sb.append("ImageOps.extractRed(");
+                postfixExpr.primary().visit(this,arg);
+                sb.append(")");
+            }if (postfixExpr.channel().color()==Kind.RES_blue)
+            {
+                sb.append("ImageOps.extractBlue(");
+                postfixExpr.primary().visit(this,arg);
+                sb.append(")");
+
+
+            }if (postfixExpr.channel().color()==Kind.RES_green)
+            {
+                sb.append("ImageOps.extractGreen(");
+                postfixExpr.primary().visit(this,arg);
+                sb.append(")");
+
+
+            }
+            return null;
+        }
+
+
         if (postfixExpr.primary() != null) {
 
             postfixExpr.primary().visit(this, arg);
@@ -775,6 +820,10 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         }
         if (postfixExpr.pixel() != null) {
             postfixExpr.pixel().visit(this, arg);
+        }
+        if (postfixExpr.channel()!=null)
+        {
+            postfixExpr.channel().visit(this,arg);
         }
         return null;
         // sb.append("")
@@ -924,42 +973,47 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitConstExpr(ConstExpr constExpr, Object arg) throws PLCCompilerException {
-        //throw new TypeCheckException("visitConstExpr");
         String text = constExpr.firstToken.text();
         String hex = null;
 
         if (Objects.equals(constExpr.getName(), "Z")) {
             hex = "255";
-            //sb.append("255");
         } else {
             if (Objects.equals(constExpr.firstToken.text(), "BLUE")) {
                 hex = "0x" + Integer.toHexString(Color.BLUE.getRGB());
-                //   sb.append(hex);
+
+            } if (Objects.equals(constExpr.firstToken.text(), "blue")) {
+                hex = "0x" + Integer.toHexString(Color.blue.getRGB());
 
             }
             if (Objects.equals(constExpr.firstToken.text(), "CYAN")) {
                 hex = "0x" + Integer.toHexString(Color.CYAN.getRGB());
-                //   sb.append(hex);
 
             }
             if (Objects.equals(constExpr.firstToken.text(), "cyan")) {
                 hex = "0x" + Integer.toHexString(Color.cyan.getRGB());
-                //   sb.append(hex);
 
             }
             if (Objects.equals(constExpr.firstToken.text(), "RED")) {
                 hex = "0x" + Integer.toHexString(Color.RED.getRGB());
-                // sb.append("RED");
+            }if (Objects.equals(constExpr.firstToken.text(), "red")) {
+                hex = "0x" + Integer.toHexString(Color.red.getRGB());
             }
             if (Objects.equals(constExpr.firstToken.text(), "GREEN")) {
                 hex = "0x" + Integer.toHexString(Color.GREEN.getRGB());
+            }if (Objects.equals(constExpr.firstToken.text(), "green")) {
+                hex = "0x" + Integer.toHexString(Color.green.getRGB());
             }
             if (Objects.equals(constExpr.firstToken.text(), "PINK")) {
                 hex = "0x" + Integer.toHexString(Color.PINK.getRGB());
-                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "pink")) {
+                hex = "0x" + Integer.toHexString(Color.pink.getRGB());
             }
             if (Objects.equals(constExpr.firstToken.text(), "MAGENTA")) {
                 hex = "0x" + Integer.toHexString(Color.MAGENTA.getRGB());
+                //    sb.append(hex);
+            }if (Objects.equals(constExpr.firstToken.text(), "magenta")) {
+                hex = "0x" + Integer.toHexString(Color.magenta.getRGB());
                 //    sb.append(hex);
             }
             if (Objects.equals(constExpr.firstToken.text(), "WHITE")) {
@@ -1004,19 +1058,15 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             }
             if (Objects.equals(constExpr.firstToken.text(), "DARK_GRAY")) {
                 hex = "0x" + Integer.toHexString(Color.DARK_GRAY.getRGB());
-                //    sb.append(hex);
             }
             if (Objects.equals(constExpr.firstToken.text(), "dark grey")) {
                 hex = "0x" + Integer.toHexString(Color.darkGray.getRGB());
-                //    sb.append(hex);
             }
             if (Objects.equals(constExpr.firstToken.text(), "black")) {
                 hex = "0x" + Integer.toHexString(Color.black.getRGB());
-                //    sb.append(hex);
             }
             if (Objects.equals(constExpr.firstToken.text(), "BLACK")) {
                 hex = "0x" + Integer.toHexString(Color.BLACK.getRGB());
-                //    sb.append(hex);
             }
         }
         sb.append(hex);
