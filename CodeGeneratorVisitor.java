@@ -891,7 +891,7 @@ sb.append(",");
         if (Objects.equals(opKind.toString(), "RES_width")) {
             sb.append("(");
             unaryExpr.getExpr().visit(this, arg);
-            sb.append(".getWidth()");
+            sb.append(".getWidth()))");
             return null;
         }
         if (Objects.equals(opKind.toString(), "SEMI"))
