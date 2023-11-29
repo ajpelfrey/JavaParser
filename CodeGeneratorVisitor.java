@@ -188,6 +188,20 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             return null;
             //sb.append()
         }
+        if (assignmentStatement.getE().getType()==Type.STRING&&assignmentStatement.getlValue().getChannelSelector()==null&&assignmentStatement.getlValue().getPixelSelector()==null)
+        {
+            sb.append("ImageOps.copyInto(");
+            sb.append("FileURLIO.readImage(");
+            assignmentStatement.getE().visit(this,arg);
+            sb.append(")");
+            sb.append(",");
+            sb.append(assignmentStatement.getlValue().firstToken.text());
+            sb.append(");");
+
+            return null;
+
+
+        }
 
         assignmentStatement.getlValue().visit(this, arg);
 
