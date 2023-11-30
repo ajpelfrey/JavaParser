@@ -29,9 +29,9 @@ public class SymbolTable {
     public void insert(NameDef nameDef) throws TypeCheckException {
         Scope scope = this.scopes.get(this.scopeLevel);
         NameDef existingNameDef = scope.lookup(nameDef.getName());
-        if (existingNameDef != null) {
+       /* if (existingNameDef != null) {
             throw new TypeCheckException(nameDef.getName()+nameDef.getType());
-        }
+        }*/
         scope.insert(nameDef);
     }
 
