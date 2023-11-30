@@ -257,6 +257,8 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                         sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.TIMES,");
                     } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
                         sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.MINUS,");
+                    }else if (binaryExpr.getOp().kind() == Kind.EQ) {
+                        sb.append("ImageOps.binaryPackedPixelBooleanOp(ImageOps.BoolOP.EQUALS,");
                     }
 
                     binaryExpr.getLeftExpr().visit(this, arg);
