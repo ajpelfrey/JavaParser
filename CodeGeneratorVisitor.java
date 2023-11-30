@@ -241,11 +241,11 @@ public class CodeGeneratorVisitor implements ASTVisitor {
     public Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws PLCCompilerException {
         if (inBinaryOP == false) {
 
-            if (binaryExpr.getOp().kind() == Kind.PLUS) {
+
 
                 //  PLUS, MINUS, TIMES, DIV, MOD;
 
-                if (binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.PIXEL) {
+                if ((binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.PIXEL)) {
                     sb.append("(");
                     if (binaryExpr.getOp().kind() == Kind.PLUS) {
                         sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
@@ -269,8 +269,32 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
                     return null;
 
+                }   if ((binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.INT)) {
+                    sb.append("(");
+                    if (binaryExpr.getOp().kind() == Kind.PLUS) {
+                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.PLUS,");
+                    } else if (binaryExpr.getOp().kind() == Kind.MOD) {
+                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.MOD,");
+                    } else if (binaryExpr.getOp().kind() == Kind.DIV) {
+                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.DIV,");
+                    } else if (binaryExpr.getOp().kind() == Kind.TIMES) {
+                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.TIMES,");
+                    } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
+                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.MINUS,");
+                    }
+
+                    binaryExpr.getLeftExpr().visit(this, arg);
+
+                    sb.append(",");
+                    binaryExpr.getRightExpr().visit(this, arg);
+
+                    sb.append(")");
+                    sb.append(")");
+
+                    return null;
+
                 }
-            }
+
 
         }
 
@@ -796,20 +820,40 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         if (postfixExpr.primary()!=null &&postfixExpr.channel()!=null && postfixExpr.pixel()!=null)
         {
             if (postfixExpr.channel().color()==Kind.RES_red) {
-             //   sb.append(postfixExpr.channel().firstToken.text());
-                postfixExpr.channel().visit(this,arg);
-               sb.append(".(ImageOps.getRGB(");
-                postfixExpr.primary().visit(this,arg);
-                sb.append(",");
+            sb.append("PixelOps.red(");
+                sb.append("ImageOps.getRGB(");
+                    sb.append(postfixExpr.primary().firstToken.text());
+                    sb.append(",");
+                    sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
+                //    sb.append(",");
 
-                sb.append(postfixExpr.pixel().xExpr().firstToken.text());
-sb.append(",");
                 sb.append(postfixExpr.pixel().yExpr().firstToken.text());
-                //postfixExpr.pixel().visit(this,arg);
+                sb.append(")");
+                sb.append(")");
 
-                // sb.append(postfixExpr.primary().firstToken.text());
-               sb.append("))");
+            }if (postfixExpr.channel().color()==Kind.RES_green) {
+            sb.append("PixelOps.green(");
+                sb.append("ImageOps.getRGB(");
+                    sb.append(postfixExpr.primary().firstToken.text());
+                    sb.append(",");
+                    sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
+                //    sb.append(",");
 
+                sb.append(postfixExpr.pixel().yExpr().firstToken.text());
+                sb.append(")");
+                sb.append(")");
+
+            }if (postfixExpr.channel().color()==Kind.RES_blue) {
+            sb.append("PixelOps.blue(");
+                sb.append("ImageOps.getRGB(");
+                    sb.append(postfixExpr.primary().firstToken.text());
+                    sb.append(",");
+                    sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
+                //    sb.append(",");
+
+                sb.append(postfixExpr.pixel().yExpr().firstToken.text());
+                sb.append(")");
+                sb.append(")");
             }
         return null;
         }
