@@ -212,6 +212,8 @@ public class Parser implements IParser {
 		{
 			consume();
 		}
+
+		Expr gg = null;
 		match(RARROW);
 		Expr trueExpr = expr();
 		match(COMMA);
