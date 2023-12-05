@@ -386,9 +386,8 @@ binaryExpr.setType(inferBinaryType);
         }
 
         Type green = (Type) expandedPixelExpr.getGreen().visit(this, arg);
-
-
-       /* if (green != Type.INT) {
+        
+        /* if (green != Type.INT) {
             throw new TypeCheckException("Exprgreen expression must be of type INT.");
         }*/
         Type blue = (Type) expandedPixelExpr.getBlue().visit(this, arg);
