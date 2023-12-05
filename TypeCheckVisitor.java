@@ -250,6 +250,11 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
 
                 }
                 break;
+                  case EXP:
+                        if (leftType==Type.INT&&right.getType()==Type.INT) {
+                            inferBinaryType = Type.INT;
+                        }
+                        break;
             case IMAGE:
                 switch (op) {
 
