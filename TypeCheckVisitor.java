@@ -113,10 +113,9 @@ public class TypeCheckVisitor implements ASTVisitor {
             Dimension dimension = (Dimension) nameDef.getDimension().visit(this, arg);
             return nameDef.getType();
         }
-        //if (!((d==null)||(d.getType()==nameDef.getType())||(d.getType()==Type.STRING&&nameDef.getType()==Type.IMAGE))){
-         //   throw new TypeCheckException("name");
-       // }
-        else {
+       if (!((declaration.getInitializer()==null)||(declaration.getInitializer().getType()==declaration.getNameDef().getType())||(declaration.getInitializer().getType()==Type.STRING&&declaration.getNameDef().getType()==Type.IMAGE))){
+            throw new TypeCheckException("here");
+       } else {
             return nameDef.getType();
         }
     }
