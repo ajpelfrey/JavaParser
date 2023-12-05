@@ -279,7 +279,7 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
         }
 
         if (inferBinaryType == null) {
-            return null;
+            throw new TypeCheckException("nullinfer");
         }
 binaryExpr.setType(inferBinaryType);
         return inferBinaryType;
@@ -376,9 +376,10 @@ binaryExpr.setType(inferBinaryType);
 
         //if (expandedPixelExpr.getRed().getType()==Type.I);
 
-     //   Type red = (Type) expandedPixelExpr.getRed().visit(this, arg);
-expandedPixelExpr.getRed().visit(this,arg);
-//if (expandedPixelExpr.get)
+     
+        //   Type red = (Type) expandedPixelExpr.getRed().visit(this, arg);
+        expandedPixelExpr.getRed().visit(this,arg);
+        //if (expandedPixelExpr.get)
         expandedPixelExpr.getRed().setType(expandedPixelExpr.getRed().getType());
         if (expandedPixelExpr.getRed().getType() != Type.INT&&expandedPixelExpr.getRed().getType() != Type.PIXEL) {
             throw new TypeCheckException(("Exprred expression must be of type INT.")+expandedPixelExpr.getRed().getType());
