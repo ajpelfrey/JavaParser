@@ -157,8 +157,8 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
             return true;
         }
         else
-// Otherwise, the types are not assignment compatible.
-        return false;
+            throw new TypeCheckException("not compatible here in type");
+        //return false;
     }
 
     @Override
