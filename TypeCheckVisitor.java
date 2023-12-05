@@ -143,7 +143,7 @@ public class TypeCheckVisitor implements ASTVisitor {
         return null;
     }
 
-    private boolean assignmentCompatible(Type lValueType, Type exprType) {
+   private boolean assignmentCompatible(Type lValueType, Type exprType) throws TypeCheckException {
 // Check if the types are the same.
         if (lValueType == exprType) {
             return true;
