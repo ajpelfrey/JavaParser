@@ -18,6 +18,9 @@ public class TypeCheckVisitor implements ASTVisitor {
     public Object visitProgram(Program program, Object arg) throws PLCCompilerException {
         root = program;
         Type type = Type.kind2type(program.getTypeToken().kind());
+        if (type == null) {
+            throw new TypeCheckException("null type");
+        }
         program.setType(type);
         programsType = program.getType();
         //SymbolTable st = new SymbolTable();
