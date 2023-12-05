@@ -418,11 +418,12 @@ binaryExpr.setType(inferBinaryType);
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCCompilerException {
         // Get the symbol table.
         SymbolTable symbolTable = st;
+        String uniqueVarName=null;
 String uniqueVarName=null;
 
         // Check if the IdentExpr name is defined in the symbol table.
         NameDef n = symbolTable.lookup(identExpr.getName());
-
+    
         // If the IdentExpr name is not defined in the symbol table, throw an exception.
         if (n == null) {
             throw new TypeCheckException("Undeclared identifier"+identExpr.getName()+identExpr.getType());
