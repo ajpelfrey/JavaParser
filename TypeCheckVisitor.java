@@ -191,6 +191,12 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
             if (op==(Kind.PLUS))
             {
                 inferBinaryType= Type.INT;
+                inferBinaryType= left.getType();
+                binaryExpr.setType(inferBinaryType);
+                return null;
+            }if (op==(Kind.EQ))
+            {
+                inferBinaryType= Type.BOOLEAN;
                 binaryExpr.setType(inferBinaryType);
                 return null;
             }
