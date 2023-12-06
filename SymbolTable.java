@@ -29,9 +29,9 @@ public class SymbolTable {
     public void insert(NameDef nameDef) throws TypeCheckException {
         Scope scope = this.scopes.get(this.scopeLevel);
         NameDef existingNameDef = scope.lookup(nameDef.getName());
-       /* if (existingNameDef != null) {
-            throw new TypeCheckException(nameDef.getName()+nameDef.getType());
-        }*/
+        if (existingNameDef != null) {
+            throw new TypeCheckException(nameDef.getName()+nameDef.getType()+nameDef.getName());
+        }
         scope.insert(nameDef);
     }
 
@@ -59,17 +59,9 @@ public class SymbolTable {
         public void setParentScope(Scope parentScope) {
             this.parentScope = parentScope;
         }
+        public Scope getParentScope() { return this.parentScope; }
+        public void insert(NameDef nameDef) { this.nameDefs.put(nameDef.getName(), nameDef);}
 
-        public Scope getParentScope() {
-            return this.parentScope;
-        }
-
-        public void insert(NameDef nameDef) {
-            this.nameDefs.put(nameDef.getName(), nameDef);
-        }
-
-        public NameDef lookup(String name) {
-            return this.nameDefs.get(name);
-        }
+        public NameDef lookup(String name) { return this.nameDefs.get(name);}
     }
 }
