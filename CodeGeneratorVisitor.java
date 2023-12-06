@@ -16,6 +16,12 @@ import java.lang.*;
 import java.util.List;
 
 public class CodeGeneratorVisitor implements ASTVisitor {
+    boolean continue$0;
+    boolean firstReturnStatement = true;
+
+    boolean comingFromL = false;
+    boolean comingfromBinary = false;
+
 
     private Map < String, Integer > declaredVariableCounts = new HashMap < > ();
     private String writeString;
@@ -149,8 +155,7 @@ public class CodeGeneratorVisitor implements ASTVisitor {
     @Override
     public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws PLCCompilerException {
         // Expr height =  assignmentStatement.getlValue().getNameDef().getDimension().getHeight();
-
-        if (assignmentStatement.getlValue().getType() == Type.IMAGE && assignmentStatement.getE().getType() == Type.PIXEL) {
+        if (assignmentStatement.getlValue().getType() == Type.IMAGE && assignmentStatement.getE().getType() == Type.PIXEL||(assignmentStatement.getlValue().getType() == Type.IMAGE && assignmentStatement.getE().getType() == Type.INT)) {
 
             sb.append("for (int x=0; x < ");
             sb.append(assignmentStatement.getlValue().getName());
@@ -161,11 +166,19 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
             sb.append("ImageOps.setRGB(");
             assignmentStatement.getlValue().visit(this, arg);
-            //   sb.append(assignmentStatement.getlValue().getName());
-            sb.append(",");
-            sb.append("x");
-            sb.append(",");
-            sb.append("y");
+            if (assignmentStatement.getlValue().getPixelSelector() != null ){
+                sb.append(",");
+                sb.append(assignmentStatement.getlValue().getPixelSelector().xExpr().firstToken.text());
+                sb.append(",");
+                sb.append(assignmentStatement.getlValue().getPixelSelector().yExpr().firstToken.text());
+            }
+            else{
+                sb.append(",");
+
+                sb.append("x");
+                sb.append(",");
+                sb.append("y");
+            }
             sb.append(",");
             sb.append("(");
 
@@ -210,8 +223,9 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             assignmentStatement.getlValue().getChannelSelector().visit(this, arg);
             sb.append(assignmentStatement.getlValue().firstToken.text());
             sb.append(",");
+            comingFromL = true;
             assignmentStatement.getE().visit(this, arg);
-
+            comingFromL = false;
             sb.append(");");
             return null;
         }
@@ -231,7 +245,9 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         }
 
         sb.append("=");
+        comingFromL = true;
         assignmentStatement.getE().visit(this, arg); //should be expanded pixel for num 6
+        comingFromL=false;
         sb.append(";");
         return null;
         //  throw new TypeCheckException("visitAssignmentStatement");
@@ -239,66 +255,122 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws PLCCompilerException {
-        if (inBinaryOP == false) {
 
 
 
-                //  PLUS, MINUS, TIMES, DIV, MOD;
 
-                if ((binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.PIXEL)) {
-                    sb.append("(");
-                    if (binaryExpr.getOp().kind() == Kind.PLUS) {
-                        sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
-                    } else if (binaryExpr.getOp().kind() == Kind.MOD) {
-                        sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.MOD,");
-                    } else if (binaryExpr.getOp().kind() == Kind.DIV) {
-                        sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.DIV,");
-                    } else if (binaryExpr.getOp().kind() == Kind.TIMES) {
-                        sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.TIMES,");
-                    } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
-                        sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.MINUS,");
-                    }else if (binaryExpr.getOp().kind() == Kind.EQ) {
-                        sb.append("ImageOps.binaryPackedPixelBooleanOp(ImageOps.BoolOP.EQUALS,");
-                    }
+        //  PLUS, MINUS, TIMES, DIV, MOD;
 
-                    binaryExpr.getLeftExpr().visit(this, arg);
+        if ((binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.PIXEL)) {
+            sb.append("(");
+            if (binaryExpr.getOp().kind() == Kind.PLUS) {
+                sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.PLUS,");
+            } else if (binaryExpr.getOp().kind() == Kind.MOD) {
+                sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.MOD,");
+            } else if (binaryExpr.getOp().kind() == Kind.DIV) {
+                sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.DIV,");
+            } else if (binaryExpr.getOp().kind() == Kind.TIMES) {
+                sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.TIMES,");
+            } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
+                sb.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP.MINUS,");
+            }else if (binaryExpr.getOp().kind() == Kind.EQ) {
+                sb.append("ImageOps.binaryPackedPixelBooleanOp(ImageOps.BoolOP.EQUALS,");
+            }
 
-                    sb.append(",");
-                    binaryExpr.getRightExpr().visit(this, arg);
+            binaryExpr.getLeftExpr().visit(this, arg);
 
-                    sb.append(")");
-                    sb.append(")");
+            sb.append(",");
+            binaryExpr.getRightExpr().visit(this, arg);
 
-                    return null;
+            sb.append(")");
+            sb.append(")");
 
-                }   if ((binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.INT)) {
-                    sb.append("(");
-                    if (binaryExpr.getOp().kind() == Kind.PLUS) {
-                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.PLUS,");
-                    } else if (binaryExpr.getOp().kind() == Kind.MOD) {
-                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.MOD,");
-                    } else if (binaryExpr.getOp().kind() == Kind.DIV) {
-                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.DIV,");
-                    } else if (binaryExpr.getOp().kind() == Kind.TIMES) {
-                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.TIMES,");
-                    } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
-                        sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.MINUS,");
-                    }
-
-                    binaryExpr.getLeftExpr().visit(this, arg);
-
-                    sb.append(",");
-                    binaryExpr.getRightExpr().visit(this, arg);
-
-                    sb.append(")");
-                    sb.append(")");
-
-                    return null;
-
-                }
-
+            return null;
 
         }
+
+        if ((binaryExpr.getLeftExpr().getType() == Type.IMAGE && binaryExpr.getRightExpr().getType() == Type.INT)) {
+            sb.append("(");
+            if (binaryExpr.getOp().kind() == Kind.PLUS) {
+                sb.append("ImageOps.binaryImageScalarOp(ImageOps.OP.PLUS,");
+            } else if (binaryExpr.getOp().kind() == Kind.MOD) {
+                sb.append("ImageOps.binaryImageScalarOp(ImageOps.OP.MOD,");
+            } else if (binaryExpr.getOp().kind() == Kind.DIV) {
+                sb.append("ImageOps.binaryImageScalarOp(ImageOps.OP.DIV,");
+            } else if (binaryExpr.getOp().kind() == Kind.TIMES) {
+                sb.append("ImageOps.binaryImageScalarOp(ImageOps.OP.TIMES,");
+            } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
+                sb.append("ImageOps.binaryImageScalarOp(ImageOps.OP.MINUS,");
+
+            }
+            comingfromBinary=true;
+            binaryExpr.getLeftExpr().visit(this, arg);
+            sb.append(",");
+            binaryExpr.getRightExpr().visit(this, arg);
+            comingfromBinary=false;
+            sb.append(")");
+            sb.append(")");
+
+            return null;
+
+        }
+
+
+
+
+
+        if ((binaryExpr.getLeftExpr().getType() == Type.PIXEL && binaryExpr.getRightExpr().getType() == Type.INT)) {
+            sb.append("(");
+            if (binaryExpr.getOp().kind() == Kind.PLUS) {
+                sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.PLUS,");
+            } else if (binaryExpr.getOp().kind() == Kind.MOD) {
+                sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.MOD,");
+            } else if (binaryExpr.getOp().kind() == Kind.DIV) {
+                sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.DIV,");
+            } else if (binaryExpr.getOp().kind() == Kind.TIMES) {
+                sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.TIMES,");
+            } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
+                sb.append("ImageOps.binaryPackedPixelScalarOp(ImageOps.OP.MINUS,");
+            }
+
+            binaryExpr.getLeftExpr().visit(this, arg);
+
+            sb.append(",");
+            binaryExpr.getRightExpr().visit(this, arg);
+
+            sb.append(")");
+            sb.append(")");
+
+            return null;
+
+        } if ((binaryExpr.getLeftExpr().getType() == Type.IMAGE && binaryExpr.getRightExpr().getType() == Type.IMAGE)) {
+            sb.append("(");
+            if (binaryExpr.getOp().kind() == Kind.PLUS) {
+                sb.append("ImageOps.binaryImageImageOp(ImageOps.OP.PLUS,");
+            } else if (binaryExpr.getOp().kind() == Kind.MOD) {
+                sb.append("ImageOps.binaryImageImageOp(ImageOps.OP.MOD,");
+            } else if (binaryExpr.getOp().kind() == Kind.DIV) {
+                sb.append("ImageOps.binaryImageImageOp(ImageOps.OP.DIV,");
+            } else if (binaryExpr.getOp().kind() == Kind.TIMES) {
+                sb.append("ImageOps.binaryImageImageOp(ImageOps.OP.TIMES,");
+            } else if (binaryExpr.getOp().kind() == Kind.MINUS) {
+                sb.append("ImageOps.binaryImageImageOp(ImageOps.OP.MINUS,");
+            }
+
+            binaryExpr.getLeftExpr().visit(this, arg);
+
+            sb.append(",");
+            binaryExpr.getRightExpr().visit(this, arg);
+
+            sb.append(")");
+            sb.append(")");
+
+            return null;
+
+        }
+
+
+
 
         if (binaryExpr.getLeftExpr().getType() == Type.STRING && binaryExpr.getOp().kind() == Kind.EQ) {
             binaryExpr.getLeftExpr().visit(this, arg);
@@ -335,7 +407,7 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                 sb.append(binaryExpr.getLeftExpr().firstToken.text());
                 sb.append(",");
                 sb.append(binaryExpr.getRightExpr().firstToken.text());
-                sb.append("))");
+                sb.append(")");
                 return null;
 
             }
@@ -556,6 +628,12 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         if (declaration.getInitializer() != null && declaration.getInitializer().getType() == Type.STRING) {
             sb.append("= FileURLIO.readImage(");
             declaration.getInitializer().visit(this, arg);
+            if (declaration.getNameDef().getDimension()!=null)
+            {
+                sb.append(",");
+                declaration.getNameDef().getDimension().visit(this, arg);
+
+            }
             sb.append(");");
             return null;
         }
@@ -604,7 +682,10 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitDoStatement(DoStatement doStatement, Object arg) throws PLCCompilerException {
-
+        continue$0 = true;
+        sb.append("{boolean continue$0= false;");
+        sb.append("while(!continue$0){");
+        sb.append("continue$0=true;");
         if (doStatement.getGuardedBlocks() != null) {
             for (int i = 0; i < doStatement.getGuardedBlocks().size(); i++) {
 
@@ -612,6 +693,8 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
             }
         }
+        //continue$0=false;
+        sb.append("};");
         return null;
 
         // throw new TypeCheckException("visitDoStatement");
@@ -634,27 +717,35 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
     @Override
     public Object visitGuardedBlock(GuardedBlock guardedBlock, Object arg) throws PLCCompilerException {
+        sb.append("if");
+
         if (guardedBlock.getGuard() != null) {
-            sb.append("if");
             sb.append("(");
 
             //  sb.append(guardedBlock.g],)
             guardedBlock.getGuard().visit(this, arg);
-            sb.append(")");
+            sb.append("){");
 
         }
         if (guardedBlock.getBlock() != null) {
+            if (continue$0)
+            {sb.append("continue$0=false;");}
             sb.append("{ ");
             guardedBlock.getBlock().visit(this, arg);
-            sb.append("}");
+            sb.append("}}");
+
+
 
         }
+        else
+            sb.append("{");
         return null;
         //        throw new TypeCheckException("visitGuardedBlock");
     }
 
     @Override
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCCompilerException {
+
         if (identExpr.getName() != null)
             if (identExpr.getNameDef() == null) {
                 sb.append(identExpr.getName());
@@ -695,8 +786,13 @@ public class CodeGeneratorVisitor implements ASTVisitor {
             sb.append("im");
             return null;
         }
+        //  IdentExpr id = identExpr;
+        if (comingFromL==false) {
+            sb.append(identExpr.getNameDef().getJavaName());
+        }
+        else
+            sb.append(identExpr.getNameDef().getName());
 
-        sb.append(identExpr.getNameDef().getName());
         return null;
     }
 
@@ -747,11 +843,13 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         if (nameDef.getType() == Type.STRING) {
             sb.append("String");
 
+
         }
-        if (nameDef.getType() == Type.PIXEL) {
+        else  if (nameDef.getType() == Type.PIXEL) {
             sb.append("int");
 
-        } else {
+        }
+        else {
             sb.append(nameDef.getType().name().toLowerCase());
         }
         String varName = nameDef.getJavaName();
@@ -822,11 +920,11 @@ public class CodeGeneratorVisitor implements ASTVisitor {
         if (postfixExpr.primary()!=null &&postfixExpr.channel()!=null && postfixExpr.pixel()!=null)
         {
             if (postfixExpr.channel().color()==Kind.RES_red) {
-            sb.append("PixelOps.red(");
+                sb.append("PixelOps.red(");
                 sb.append("ImageOps.getRGB(");
-                    sb.append(postfixExpr.primary().firstToken.text());
-                    sb.append(",");
-                    sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
+                sb.append(postfixExpr.primary().firstToken.text());
+                sb.append(",");
+                sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
                 //    sb.append(",");
 
                 sb.append(postfixExpr.pixel().yExpr().firstToken.text());
@@ -835,29 +933,29 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
             }if (postfixExpr.channel().color()==Kind.RES_green) {
             sb.append("PixelOps.green(");
-                sb.append("ImageOps.getRGB(");
-                    sb.append(postfixExpr.primary().firstToken.text());
-                    sb.append(",");
-                    sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
-                //    sb.append(",");
+            sb.append("ImageOps.getRGB(");
+            sb.append(postfixExpr.primary().firstToken.text());
+            sb.append(",");
+            sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
+            //    sb.append(",");
 
-                sb.append(postfixExpr.pixel().yExpr().firstToken.text());
-                sb.append(")");
-                sb.append(")");
+            sb.append(postfixExpr.pixel().yExpr().firstToken.text());
+            sb.append(")");
+            sb.append(")");
 
-            }if (postfixExpr.channel().color()==Kind.RES_blue) {
+        }if (postfixExpr.channel().color()==Kind.RES_blue) {
             sb.append("PixelOps.blue(");
-                sb.append("ImageOps.getRGB(");
-                    sb.append(postfixExpr.primary().firstToken.text());
-                    sb.append(",");
-                    sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
-                //    sb.append(",");
+            sb.append("ImageOps.getRGB(");
+            sb.append(postfixExpr.primary().firstToken.text());
+            sb.append(",");
+            sb.append(postfixExpr.pixel().xExpr().firstToken.text());sb.append(",");
+            //    sb.append(",");
 
-                sb.append(postfixExpr.pixel().yExpr().firstToken.text());
-                sb.append(")");
-                sb.append(")");
-            }
-        return null;
+            sb.append(postfixExpr.pixel().yExpr().firstToken.text());
+            sb.append(")");
+            sb.append(")");
+        }
+            return null;
         }
         if (postfixExpr.channel()!=null&&postfixExpr.pixel()==null)
         {
@@ -867,20 +965,20 @@ public class CodeGeneratorVisitor implements ASTVisitor {
                 postfixExpr.primary().visit(this,arg);
                 sb.append(")");
             }if (postfixExpr.channel().color()==Kind.RES_blue)
-            {
-                sb.append("ImageOps.extractBlue(");
-                postfixExpr.primary().visit(this,arg);
-                sb.append(")");
+        {
+            sb.append("ImageOps.extractBlue(");
+            postfixExpr.primary().visit(this,arg);
+            sb.append(")");
 
 
-            }if (postfixExpr.channel().color()==Kind.RES_green)
-            {
-                sb.append("ImageOps.extractGreen(");
-                postfixExpr.primary().visit(this,arg);
-                sb.append(")");
+        }if (postfixExpr.channel().color()==Kind.RES_green)
+        {
+            sb.append("ImageOps.extractGreen(");
+            postfixExpr.primary().visit(this,arg);
+            sb.append(")");
 
 
-            }
+        }
             return null;
         }
 
@@ -908,14 +1006,20 @@ public class CodeGeneratorVisitor implements ASTVisitor {
 
         Expr e = returnStatement.getE();
         e.visit(this, arg);
+
         sb.append(";");
+        if (continue$0&&firstReturnStatement)
+        {
+            sb.append("}");
+        }
+        firstReturnStatement=false;
         return null;
     }
 
     @Override
     public Object visitStringLitExpr(StringLitExpr stringLitExpr, Object arg) throws PLCCompilerException {
         sb.append(stringLitExpr.getText());
-        toPrint = stringLitExpr.getText();
+        // toPrint = stringLitExpr.getText();
         //  sb.append(";");
         return stringLitExpr;
         //        throw new TypeCheckException("visitStringLitExpr");
@@ -1019,7 +1123,12 @@ public class CodeGeneratorVisitor implements ASTVisitor {
     @Override
     public Object visitWriteStatement(WriteStatement writeStatement, Object arg) throws PLCCompilerException {
         // Object value = writeStatement.getExpr().visit(this, arg);
-        sb.append("ConsoleIO.write(");
+        if (writeStatement.getExpr().getType()==Type.PIXEL)
+        {
+            sb.append("ConsoleIO.writePixel(");
+        }
+        else{
+            sb.append("ConsoleIO.write(");}
         Object value;
         value = writeStatement.getExpr().visit(this, arg);
         // Expr e = writeStatement.getExpr();
