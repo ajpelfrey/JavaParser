@@ -11,6 +11,7 @@ public class TypeCheckVisitor implements ASTVisitor {
 
 
     List<String> list = new ArrayList<>();
+    boolean pixelsParent = false;
     private AST root = null;
     SymbolTable st = new SymbolTable();
     Type programsType = null;
@@ -18,8 +19,9 @@ public class TypeCheckVisitor implements ASTVisitor {
     public Object visitProgram(Program program, Object arg) throws PLCCompilerException {
         root = program;
         Type type = Type.kind2type(program.getTypeToken().kind());
-        if (type == null) {
-            throw new TypeCheckException("null type");
+        if (type ==null)
+        {
+            throw new TypeCheckException("null type ");
         }
         program.setType(type);
         programsType = program.getType();
@@ -58,36 +60,36 @@ public class TypeCheckVisitor implements ASTVisitor {
             type = Type.IMAGE;
         }
         else
-            if
+        if
         ((nameDef.getType() == Type.INT)||
-                        (nameDef.getType() == Type.BOOLEAN)||
-                        (nameDef.getType() == Type.STRING)
-                        || (nameDef.getType() == Type.PIXEL)||
-                        (nameDef.getType() == Type.IMAGE))
+                (nameDef.getType() == Type.BOOLEAN)||
+                (nameDef.getType() == Type.STRING)
+                || (nameDef.getType() == Type.PIXEL)||
+                (nameDef.getType() == Type.IMAGE))
         {
             type = Type.kind2type(nameDef.getTypeToken().kind());
         }
-            else throw new TypeCheckException("wrong type of namedef");
+        else throw new TypeCheckException("wrong type of namedef");
 
         String varName = nameDef.getName();
 
-            if (declaredVariables.contains(nameDef.getName())) {
-                int varCount = declaredVariableCounts.getOrDefault(varName, 0);
-                declaredVariableCounts.put(varName, varCount + 1);
-                String uniqueVarName = varName + "$" + varCount;
+        if (declaredVariables.contains(nameDef.getName())) {
+            int varCount = declaredVariableCounts.getOrDefault(varName, 0);
+            declaredVariableCounts.put(varName, varCount + 1);
+            String uniqueVarName = varName + "$" + varCount;
 
-                // Add the unique variable name to declared variables
-                declaredVariables.add(uniqueVarName);
-                nameDef.setJavaName(uniqueVarName);
+            // Add the unique variable name to declared variables
+            declaredVariables.add(uniqueVarName);
+            nameDef.setJavaName(uniqueVarName);
 
-                // Variable name already exists, append unique identifier
-                varName += "$" + (identifierCount++);
-            } else {
-                //varName+="$1";
-                // New variable name, add to declared variables
-                declaredVariables.add(varName);
-                nameDef.setJavaName(varName);
-            }
+            // Variable name already exists, append unique identifier
+            varName += "$" + (identifierCount++);
+        } else {
+            //varName+="$1";
+            // New variable name, add to declared variables
+            declaredVariables.add(varName);
+            nameDef.setJavaName(varName);
+        }
 
         st.insert(nameDef);
         return type;
@@ -105,7 +107,7 @@ public class TypeCheckVisitor implements ASTVisitor {
         NameDef nameDef = declaration.getNameDef();
 
 
-            if (nameDef != null) {
+        if (nameDef != null) {
             nameDef.visit(this,arg);
         }
         if (nameDef.getDimension() != null)
@@ -113,15 +115,15 @@ public class TypeCheckVisitor implements ASTVisitor {
             Dimension dimension = (Dimension) nameDef.getDimension().visit(this, arg);
             return nameDef.getType();
         }
-       if (!((declaration.getInitializer()==null)||(declaration.getInitializer().getType()==declaration.getNameDef().getType())||(declaration.getInitializer().getType()==Type.STRING&&declaration.getNameDef().getType()==Type.IMAGE))){
-            throw new TypeCheckException("here");
-       } else {
+        if (!((declaration.getInitializer()==null)||(declaration.getInitializer().getType()==declaration.getNameDef().getType())||(declaration.getInitializer().getType()==Type.STRING&&declaration.getNameDef().getType()==Type.IMAGE))){
+            throw new TypeCheckException("here");}//   throw new TypeCheckException("name");}
+        else {
             return nameDef.getType();
         }
     }
     @Override
     public Object visitAssignmentStatement(AssignmentStatement assignmentStatement, Object arg) throws PLCCompilerException {
-      //  SymbolTable symbolTable = st;
+        //  SymbolTable symbolTable = st;
         st.enterScope();
 
         Boolean b=false;
@@ -129,35 +131,37 @@ public class TypeCheckVisitor implements ASTVisitor {
 
         assignmentStatement.getlValue().visit(this, arg);
         assignmentStatement.getE().visit(this, arg);
+
 //assignmentStatement.getE().setType();
-       b = assignmentCompatible(assignmentStatement.getlValue().getType(), assignmentStatement.getE().getType());
+        b = assignmentCompatible(assignmentStatement.getlValue().getType(), assignmentStatement.getE().getType());
         st.leaveScope();
 
-       if (!b)
+        if (!b)
         {
-           throw new TypeCheckException("not copatible "+assignmentStatement.getE().getType()+ "<-e"+assignmentStatement.getlValue().getType());
+            throw new TypeCheckException("not copatible "+assignmentStatement.getE().getType()+ "<-e"+assignmentStatement.getlValue().getType());
         }
-       // symbolTable.leaveScope();
+        // symbolTable.leaveScope();
 
         return null;
     }
 
-   private boolean assignmentCompatible(Type lValueType, Type exprType) throws TypeCheckException {
+    private boolean assignmentCompatible(Type lValueType, Type exprType) throws TypeCheckException {
 // Check if the types are the same.
         if (lValueType == exprType) {
             return true;
         }
-else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
-{
-    return true;
-}
+        else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
+        {
+            return true;
+        }
         else if  (lValueType ==Type.IMAGE&&exprType==Type.INT||lValueType ==Type.IMAGE&&exprType==Type.PIXEL
-        ||lValueType ==Type.IMAGE&&exprType==Type.STRING)
+                ||lValueType ==Type.IMAGE&&exprType==Type.STRING)
         {
             return true;
         }
         else
             throw new TypeCheckException("not compatible here in type");
+// Otherwise, the types are not assignment compatible.
         //return false;
     }
 
@@ -166,13 +170,13 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
         Type leftType=null;
         Expr left = binaryExpr.getLeftExpr();
         Kind op1 = binaryExpr.getOp().kind();
-         Kind op  = op1;
+        Kind op  = op1;
         //System.out.println(op.name());
         Expr right = binaryExpr.getRightExpr();
         Type inferBinaryType = null;
         if (left!=null){
 
-       left.visit(this, arg);
+            left.visit(this, arg);
             leftType=left.getType();
             if (left.getType()==null)
             {
@@ -182,23 +186,22 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
         }
         else throw new TypeCheckException("left is null");
         if (right!=null){
-        right.visit(this, arg);}
+            right.visit(this, arg);}
         else throw new TypeCheckException("r is null");
 
         if (left.getType()==right.getType())
         {
             if (op==(Kind.PLUS))
             {
-                inferBinaryType= Type.INT;
                 inferBinaryType= left.getType();
                 binaryExpr.setType(inferBinaryType);
                 return null;
             }if (op==(Kind.EQ))
-            {
-                inferBinaryType= Type.BOOLEAN;
-                binaryExpr.setType(inferBinaryType);
-                return null;
-            }
+        {
+            inferBinaryType= Type.BOOLEAN;
+            binaryExpr.setType(inferBinaryType);
+            return null;
+        }
         }
 
 
@@ -208,8 +211,22 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
                     case MINUS,TIMES,DIV,MOD:
                         if (leftType==right.getType()) {
                             inferBinaryType = leftType;
+                            break;
                         }
-                        break;
+                        if (op==Kind.TIMES||op==Kind.DIV||op==Kind.MOD)
+                        {
+                            if (left.getType()==Type.PIXEL||left.getType()==Type.IMAGE)
+                            {
+                                if (right.getType()==Type.INT)
+                                {
+                                    inferBinaryType=leftType;
+                                    break;
+                                }
+                            }
+                        }
+
+
+
                     case BITAND, BITOR:
                         if (Objects.requireNonNull(right.getType()) == Type.PIXEL) {
                             inferBinaryType = Type.PIXEL;
@@ -242,19 +259,21 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
                             inferBinaryType = Type.BOOLEAN;
                         }
                         break;
-                    case MINUS,TIMES,DIV,MOD:
-                        if (leftType==right.getType()) {
+                    case MINUS, TIMES, DIV, MOD:
+                        if (leftType == right.getType()) {{
                             inferBinaryType = leftType;
+                        }
+                            break;
+                        }
+
+                    case EXP:
+                        if (leftType==Type.INT&&right.getType()==Type.INT) {
+                            inferBinaryType = Type.INT;
                         }
                         break;
 
                 }
                 break;
-                  case EXP:
-                        if (leftType==Type.INT&&right.getType()==Type.INT) {
-                            inferBinaryType = Type.INT;
-                        }
-                        break;
             case IMAGE:
                 switch (op) {
 
@@ -266,11 +285,23 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
                         }
                         break;
 
-                    case MINUS,TIMES,DIV,MOD:
-                        if (leftType==right.getType()) {
+                    case MINUS, TIMES, DIV, MOD:
+                        if (leftType == right.getType()) {{
                             inferBinaryType = leftType;
                         }
-                        break;
+                            break;
+                        }
+                        if (op==Kind.TIMES||op==Kind.DIV||op==Kind.MOD)
+                        {
+                            if (left.getType()==Type.PIXEL||left.getType()==Type.IMAGE)
+                            {
+                                if (right.getType()==Type.INT)
+                                {
+                                    inferBinaryType=leftType;
+                                    break;
+                                }
+                            }
+                        }
                     default:
 
                         throw new TypeCheckException("Unsupported binary operation for IMAGE type");
@@ -281,7 +312,7 @@ else if  (lValueType ==Type.PIXEL&&exprType==Type.INT)
         if (inferBinaryType == null) {
             throw new TypeCheckException("nullinfer");
         }
-binaryExpr.setType(inferBinaryType);
+        binaryExpr.setType(inferBinaryType);
         return inferBinaryType;
     }
 
@@ -300,19 +331,19 @@ binaryExpr.setType(inferBinaryType);
     @Override
     public Object visitChannelSelector(ChannelSelector channelSelector, Object arg) throws PLCCompilerException {
         if (channelSelector.color()==null){
- throw new UnsupportedOperationException("visitChannelSelector"+channelSelector.color());}
+            throw new UnsupportedOperationException("visitChannelSelector"+channelSelector.color());}
         return arg;
     }
 
     @Override
     public Object visitConditionalExpr(ConditionalExpr conditionalExpr, Object arg) throws PLCCompilerException {
 
-         conditionalExpr.getGuardExpr().visit(this, arg);
-       // Type guardExprType =.getType();
+        conditionalExpr.getGuardExpr().visit(this, arg);
+        // Type guardExprType =.getType();
         //Type trueExprType = conditionalExpr.getTrueExpr().getType();
         conditionalExpr.getTrueExpr().visit(this,arg);
-       conditionalExpr.getFalseExpr().visit(this,arg);
-       // Type falseExprType = conditionalExpr.getFalseExpr().getType();
+        conditionalExpr.getFalseExpr().visit(this,arg);
+        // Type falseExprType = conditionalExpr.getFalseExpr().getType();
 
         if (conditionalExpr.getGuardExpr().getType() != Type.BOOLEAN) {
             throw new TypeCheckException("Guard expression must be of type BOOLEAN."+ conditionalExpr.getGuardExpr().toString());
@@ -323,7 +354,7 @@ binaryExpr.setType(inferBinaryType);
         }
 
         conditionalExpr.setType(conditionalExpr.getTrueExpr().getType());
-       // conditionalExpr.visit(this, arg);
+        // conditionalExpr.visit(this, arg);
 
         return null;
     }
@@ -331,8 +362,8 @@ binaryExpr.setType(inferBinaryType);
 
     @Override
     public Object visitDimension(Dimension dimension, Object arg) throws PLCCompilerException {
-    Type typeW = (Type) dimension.getWidth().visit(this, arg);
-      check(typeW==Type.INT, dimension, "image width must be INT");
+        Type typeW = (Type) dimension.getWidth().visit(this, arg);
+        check(typeW==Type.INT, dimension, "image width must be INT");
         Type typeH = dimension.getHeight() != null ? (Type) dimension.getHeight().visit(this, arg) : Type.INT;
         check(typeH==Type.INT, dimension, "image height must be INT");
         return dimension;
@@ -360,7 +391,7 @@ binaryExpr.setType(inferBinaryType);
                 // Generate code for the GuardedBlock's body.
                 guardedBlock.visit(this, arg);
                 return null;
-        }
+            }
         }
 
         else {
@@ -376,18 +407,18 @@ binaryExpr.setType(inferBinaryType);
 
         //if (expandedPixelExpr.getRed().getType()==Type.I);
 
-     
         //   Type red = (Type) expandedPixelExpr.getRed().visit(this, arg);
         expandedPixelExpr.getRed().visit(this,arg);
-        //if (expandedPixelExpr.get)
+//if (expandedPixelExpr.get)
         expandedPixelExpr.getRed().setType(expandedPixelExpr.getRed().getType());
         if (expandedPixelExpr.getRed().getType() != Type.INT&&expandedPixelExpr.getRed().getType() != Type.PIXEL) {
             throw new TypeCheckException(("Exprred expression must be of type INT.")+expandedPixelExpr.getRed().getType());
         }
 
         Type green = (Type) expandedPixelExpr.getGreen().visit(this, arg);
-        
-        /* if (green != Type.INT) {
+
+
+       /* if (green != Type.INT) {
             throw new TypeCheckException("Exprgreen expression must be of type INT.");
         }*/
         Type blue = (Type) expandedPixelExpr.getBlue().visit(this, arg);
@@ -406,7 +437,7 @@ binaryExpr.setType(inferBinaryType);
     public Object visitGuardedBlock(GuardedBlock guardedBlock, Object arg) throws PLCCompilerException {
         // Check if the Expr node in the ExprGuard node evaluates to true. If it does not, then skip the Block node in the GuardedBlock node.
         Expr expr = guardedBlock.getGuard();
-       expr.setType(Type.BOOLEAN);
+        expr.setType(Type.BOOLEAN);
 
         // Visit the Block node in the GuardedBlock node.
         guardedBlock.getGuard().visit(this,arg);
@@ -419,23 +450,23 @@ binaryExpr.setType(inferBinaryType);
         // Get the symbol table.
         SymbolTable symbolTable = st;
         String uniqueVarName=null;
-String uniqueVarName=null;
+        if (symbolTable.lookup(identExpr.getName())!=null) {
+            // Check if the IdentExpr name is defined in the symbol table.
 
-        // Check if the IdentExpr name is defined in the symbol table.
-        NameDef n = symbolTable.lookup(identExpr.getName());
-    
-        // If the IdentExpr name is not defined in the symbol table, throw an exception.
-        if (n == null) {
-            throw new TypeCheckException("Undeclared identifier"+identExpr.getName()+identExpr.getType());
-        }
+            NameDef n = symbolTable.lookup(identExpr.getName());
+            // If the IdentExpr name is not defined in the symbol table, throw an exception.
+            if (n == null) {
+                throw new TypeCheckException("Undeclared identifier" + identExpr.getName() + identExpr.getType());
+            }
 
 
-        // Assign the IdentExpr name definition and type to the IdentExpr object.
-        identExpr.setNameDef(n);
-        identExpr.setType(n.getType());
-
+            // Assign the IdentExpr name definition and type to the IdentExpr object.
+            identExpr.setNameDef(n);
+            identExpr.setType(n.getType());
+            return n.getType();
+        }else throw new TypeCheckException("not in symbol table ");
         // Return the type of the IdentExpr object.
-        return n.getType();
+
     }
 
     @Override
@@ -472,7 +503,7 @@ String uniqueVarName=null;
 
         String name = lValue.getName();
         NameDef symbolDef = st.lookup(name);
-       
+
         if (symbolDef == null) {
             throw new PLCCompilerException("LValue name not found in symbol table: " + name);
         }
@@ -504,7 +535,8 @@ String uniqueVarName=null;
 
         }
         if (lValue.getPixelSelector() != null) {
-           lValue.getPixelSelector().visit(this, arg);
+            pixelsParent = true;
+            lValue.getPixelSelector().visit(this, arg);
             lValue.setType(Type.IMAGE);
         }
 
@@ -515,20 +547,19 @@ String uniqueVarName=null;
 
     @Override
     public Object visitNumLitExpr(NumLitExpr numLitExpr, Object arg) throws PLCCompilerException {
-      Type type = Type.INT;
+        Type type = Type.INT;
         numLitExpr.setType(Type.INT);
         return type;
-}
+    }
 
     @Override
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws PLCCompilerException {
 
-
-        if (pixelSelector.xExpr()!=null&&pixelSelector.xExpr().firstToken.kind()==Kind.NUM_LIT||pixelSelector.xExpr().firstToken.kind()==Kind.IDENT)
+        if (pixelSelector.xExpr()!=null&&pixelSelector.xExpr().firstToken.kind()==Kind.NUM_LIT||pixelSelector.xExpr().firstToken.kind()==Kind.IDENT&&pixelSelector.yExpr()!=null&&pixelSelector.yExpr().firstToken.kind()==Kind.NUM_LIT||pixelSelector.yExpr().firstToken.kind()==Kind.IDENT)
         {
             if (pixelSelector.xExpr().firstToken.kind()==Kind.IDENT)
             {
-                if (st.lookup(pixelSelector.xExpr().toString())==null)
+                if (st.lookup(pixelSelector.xExpr().firstToken.text())==null)
                 {
                     NameDef x = new SyntheticNameDef(pixelSelector.xExpr().firstToken().text());
 
@@ -541,9 +572,8 @@ String uniqueVarName=null;
         {
             if (pixelSelector.yExpr().firstToken.kind()==Kind.IDENT)
             {
-                if (st.lookup(pixelSelector.yExpr().toString())==null)
+                if (st.lookup(pixelSelector.yExpr().firstToken().text())==null)
                 {
-                    Expr temp = pixelSelector.yExpr();
 
 
                     st.insert(new SyntheticNameDef(pixelSelector.yExpr().firstToken().text()));
@@ -552,12 +582,13 @@ String uniqueVarName=null;
             }
             pixelSelector.yExpr().setType(Type.INT);
         }
+
         else throw new TypeCheckException("pixe");
         if (pixelSelector.xExpr().getType()!=Type.INT||pixelSelector.yExpr().getType()!=Type.INT)
         {
             throw new TypeCheckException("must be int pixelselect");
         }
-return null;
+        return null;
     }
 
     @Override
@@ -567,20 +598,20 @@ return null;
         postfixExpr.primary().visit(this,arg);
         postfixExpr.primary().setType(postfixExpr.primary().getType());
         //visitPixelSelector(postfixExpr.pixel(), arg);
-if (pixelSelector!=null){
+        if (pixelSelector!=null){
 
-        postfixExpr.pixel().visit(this,arg);
+            postfixExpr.pixel().visit(this,arg);
 
-}
-    Type type;
-    type = inferPostFixExprType(postfixExpr);
-    if (type!=null)
-    {
-    postfixExpr.setType(type);
-    return type;
-}
+        }
+        Type type;
+        type = inferPostFixExprType(postfixExpr);
+        if (type!=null)
+        {
+            postfixExpr.setType(type);
+            return type;
+        }
 
-    return null;}
+        return null;}
 
     private Type inferPostFixExprType(PostfixExpr postfixExpr) throws PLCCompilerException {
 
@@ -618,20 +649,27 @@ if (pixelSelector!=null){
 
     @Override
     public Object visitReturnStatement(ReturnStatement returnStatement, Object arg) throws PLCCompilerException {
+        if (returnStatement==null)
+        {
+            throw new TypeCheckException("null return ");
+        }
         Expr expr = returnStatement.getE();
 
         if (expr == null ) {
 
-            //throw new TypeCheckException("here");
-            return null;
+            throw new TypeCheckException("here");
         }
         expr.visit(this,arg);
         Type type;
         type = programsType;
+        if (expr.getType()==Type.INT&&type==Type.STRING||expr.getType()==Type.STRING&&type==Type.INT)
+        {
+            throw new TypeCheckException("program type not equal to return var type ");
+        }
         //st.lookup(returnStatement.getE().toString());
 
         expr.setType(type);
-       // expr.visit(this,arg);
+        // expr.visit(this,arg);
 
         return null;
     }
@@ -640,7 +678,7 @@ if (pixelSelector!=null){
     public Object visitStringLitExpr(StringLitExpr stringLitExpr, Object arg) throws PLCCompilerException {
 
 
-       stringLitExpr.setType(Type.STRING);
+        stringLitExpr.setType(Type.STRING);
         return null;
     }
 
@@ -649,15 +687,15 @@ if (pixelSelector!=null){
 
         Kind o = unaryExpr.getOp();
         Expr e = unaryExpr.getExpr();
-;        e.visit(this ,arg);
+        ;        e.visit(this ,arg);
         Type tt = unaryExpr.getExpr().getType();
         Type t=  inferUnaryExpr(tt, o);
         unaryExpr.setType(t);
-       if (t==null){
-           throw new SyntaxException("Unary expr issue");
-       }
-       else
-        return null;
+        if (t==null){
+            throw new TypeCheckException("Unary expr issue");
+        }
+        else
+            return null;
     }
 
     private Type inferUnaryExpr(Type type, Kind op) throws TypeCheckException {
@@ -677,25 +715,25 @@ if (pixelSelector!=null){
         {
             return Type.INT;
         }
-return null;
+        return null;
     }
 
     @Override
     public Object visitWriteStatement(WriteStatement writeStatement, Object arg) throws PLCCompilerException {
-       Expr e= writeStatement.getExpr();
+        Expr e= writeStatement.getExpr();
 
-       if (e!=null) {
-           e.visit(this, arg);
+        if (e!=null) {
+            e.visit(this, arg);
 
-           return null;
-       }
-       else throw new TypeCheckException("write");
+            return null;
+        }
+        else throw new TypeCheckException("write");
     }
 
     @Override
     public Object visitBooleanLitExpr(BooleanLitExpr booleanLitExpr, Object arg) throws PLCCompilerException {
-booleanLitExpr.setType(Type.BOOLEAN);
-return Type.BOOLEAN;
+        booleanLitExpr.setType(Type.BOOLEAN);
+        return Type.BOOLEAN;
     }
 
     @Override
@@ -712,7 +750,7 @@ return Type.BOOLEAN;
         {
             throw new TypeCheckException("name is null");
         }
-    return null;
-}
+        return null;
+    }
 
 }
