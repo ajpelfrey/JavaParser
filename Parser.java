@@ -328,7 +328,7 @@ public class Parser implements IParser {
 			consume();
 			rightExpr = multiplicativeExpr();
 			if (t.kind()==RPAREN){
-			consume();}
+				consume();}
 
 			leftExpr = new BinaryExpr(firstToken, leftExpr, op, rightExpr);
 
