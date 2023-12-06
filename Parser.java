@@ -188,7 +188,7 @@ public class Parser implements IParser {
 			throw new SyntaxException("Decleration error" + t.text());
 	}
 
-	private boolean isExprStart() throws LexicalException {
+	private boolean isExprStart() throws LexicalException, SyntaxException {
 		return isKind(Kind.QUESTION) || isKind(Kind.BANG) || isKind(Kind.MINUS) || isKind(Kind.RES_width) || isKind(Kind.RES_height) || isKind(Kind.STRING_LIT) || isKind(Kind.NUM_LIT) || isKind(Kind.BOOLEAN_LIT) || isKind(Kind.IDENT) || isKind(Kind.LPAREN) || isKind(Kind.CONST) || isKind(Kind.LSQUARE);
 	}
 
@@ -661,6 +661,10 @@ public class Parser implements IParser {
 
 		guard = expr();
 
+		if (t.kind()==RPAREN)
+		{
+			consume();
+		}
 		match(Kind.RARROW);
 
 		Block block;
@@ -691,7 +695,7 @@ public class Parser implements IParser {
 
 	}
 
-	public boolean matches(Kind kind) throws LexicalException { //single parameter and consumes
+	public boolean matches(Kind kind) throws LexicalException, SyntaxException { //single parameter and consumes
 
 		if (isKind(kind)) {
 			consume();
@@ -714,14 +718,14 @@ public class Parser implements IParser {
 		}
 		return false;
 	}
-	public boolean isKind(Kind kinds) throws LexicalException { //single parameter doesn't consume
+	public boolean isKind(Kind kinds) throws LexicalException, SyntaxException { //single parameter doesn't consume
 
 		if (t.kind() == kinds) {
 			return true;
 		}
 
 		if (t.kind() == Kind.EOF) {
-			throw new LexicalException(t.sourceLocation() + "EOF");
+			throw new SyntaxException(t.sourceLocation() + "EOF");
 		}
 		return false;
 	}
